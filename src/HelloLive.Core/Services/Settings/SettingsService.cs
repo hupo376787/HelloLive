@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Unicode;
@@ -65,13 +66,18 @@ public sealed class SettingsService
 
     private static AppSettings Normalize(AppSettings settings)
     {
-        settings.Version = 1;
+        settings.Version = 2;
         settings.MaxConcurrentPages = Math.Clamp(settings.MaxConcurrentPages, 1, 8);
         settings.CheckIntervalSeconds = Math.Clamp(settings.CheckIntervalSeconds, 10, 3600);
         settings.CheckTimeoutSeconds = Math.Clamp(settings.CheckTimeoutSeconds, 5, 120);
+        settings.RemoteApiPort = Math.Clamp(settings.RemoteApiPort, 1024, 65535);
         settings.Theme = string.Equals(settings.Theme, "Dark", StringComparison.OrdinalIgnoreCase)
             ? "Dark"
             : "Light";
+
+        if (string.IsNullOrWhiteSpace(settings.RemoteApiToken))
+            settings.RemoteApiToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
+
         return settings;
     }
 
