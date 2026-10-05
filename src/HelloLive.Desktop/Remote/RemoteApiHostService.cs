@@ -7,6 +7,7 @@ using Avalonia.Threading;
 using HelloLive.Core.Contracts;
 using HelloLive.Core.ViewModels;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -83,7 +84,10 @@ public sealed class RemoteApiHostService : IAsyncDisposable
             app.Use(async (context, next) =>
             {
                 if (HttpMethods.IsOptions(context.Request.Method)
-                    || context.Request.Path.Equals("/api/health", StringComparison.OrdinalIgnoreCase))
+                    || string.Equals(
+                        context.Request.Path.Value,
+                        "/api/health",
+                        StringComparison.OrdinalIgnoreCase))
                 {
                     await next();
                     return;
