@@ -313,7 +313,7 @@ public sealed class RemoteMainViewModel : ObservableObject, IAsyncDisposable
             try
             {
                 await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
-                await Dispatcher.UIThread.InvokeAsync(RefreshSnapshotAsync);
+                await RunOnUiAsync(RefreshSnapshotAsync);
             }
             catch (OperationCanceledException)
             {
@@ -334,6 +334,28 @@ public sealed class RemoteMainViewModel : ObservableObject, IAsyncDisposable
 
         cts.Cancel();
         cts.Dispose();
+    }
+
+    private static Task RunOnUiAsync(Func<Task> action)
+    {
+        if (Dispatcher.UIThread.CheckAccess())
+            return action();
+
+        var completion = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        Dispatcher.UIThread.Post(async () =>
+        {
+            try
+            {
+                await action();
+                completion.TrySetResult(true);
+            }
+            catch (Exception ex)
+            {
+                completion.TrySetException(ex);
+            }
+        });
+        return completion.Task;
     }
 
     private void ToggleTheme()
