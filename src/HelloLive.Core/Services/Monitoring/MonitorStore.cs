@@ -33,8 +33,8 @@ public sealed class MonitorStore
                 return Array.Empty<LiveMonitorTarget>();
 
             var json = File.ReadAllText(StorePath);
-            return JsonSerializer.Deserialize<List<LiveMonitorTarget>>(json, JsonOptions)
-                   ?? Array.Empty<LiveMonitorTarget>();
+            var items = JsonSerializer.Deserialize<List<LiveMonitorTarget>>(json, JsonOptions);
+            return items is null ? Array.Empty<LiveMonitorTarget>() : items;
         }
         catch
         {
