@@ -3,6 +3,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using HelloLive.Core.Contracts;
 using HelloLive.Core.Models;
 using HelloLive.Core.Services.Browser;
 using HelloLive.Core.Services.Monitoring;
@@ -41,6 +42,10 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private double _chromiumInstallProgressPercent;
     private string _chromiumInstallProgressText = string.Empty;
     private string _themeIcon = "☾";
+    private bool _remoteApiEnabled;
+    private int _remoteApiPort;
+    private string _remoteApiToken = string.Empty;
+    private string _remoteApiStatusText = "远程控制服务器未启动";
 
     public MainWindowViewModel(
         ILiveBrowserService browser,
@@ -63,6 +68,9 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         _blockImagesAndFonts = _settings.BlockImagesAndFonts;
         _autoStartMonitoring = _settings.AutoStartMonitoring;
         _isMonitorPanelVisible = _settings.MonitorPanelVisible;
+        _remoteApiEnabled = _settings.RemoteApiEnabled;
+        _remoteApiPort = _settings.RemoteApiPort;
+        _remoteApiToken = _settings.RemoteApiToken;
 
         AddMonitorCommand = new AsyncRelayCommand(AddMonitorAsync);
         StartMonitoringCommand = new AsyncRelayCommand(StartMonitoringAsync);
@@ -85,6 +93,9 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         RefreshCoordinatorState();
         RaiseMetricsChanged();
     }
+
+    public event EventHandler<bool>? RemoteApiEnabledChanged;
+    public event EventHandler? RemoteApiPortChanged;
 
     public ObservableCollection<LiveMonitorTarget> Monitors { get; } = [];
     public ObservableCollection<string> Logs { get; } = [];
@@ -265,6 +276,43 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     {
         get => _themeIcon;
         private set => SetProperty(ref _themeIcon, value);
+    }
+
+    public bool RemoteApiEnabled
+    {
+        get => _remoteApiEnabled;
+        set
+        {
+            if (!SetProperty(ref _remoteApiEnabled, value))
+                return;
+
+            _settings.RemoteApiEnabled = value;
+            PersistSettingsSoon();
+            RemoteApiEnabledChanged?.Invoke(this, value);
+        }
+    }
+
+    public int RemoteApiPort
+    {
+        get => _remoteApiPort;
+        set
+        {
+            var normalized = Math.Clamp(value, 1024, 65535);
+            if (!SetProperty(ref _remoteApiPort, normalized))
+                return;
+
+            _settings.RemoteApiPort = normalized;
+            PersistSettingsSoon();
+            RemoteApiPortChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    public string RemoteApiToken => _remoteApiToken;
+
+    public string RemoteApiStatusText
+    {
+        get => _remoteApiStatusText;
+        private set => SetProperty(ref _remoteApiStatusText, value);
     }
 
     public int MonitorCount => Monitors.Count;
@@ -482,6 +530,121 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         Logs.Add(line);
         while (Logs.Count > 500)
             Logs.RemoveAt(0);
+    }
+
+    public void AddRemoteLog(string message) => AddLog(message);
+
+    public void SetRemoteApiStatusText(string text)
+        => RemoteApiStatusText = string.IsNullOrWhiteSpace(text)
+            ? "远程控制服务器未启动"
+            : text;
+
+    public RemoteLiveSnapshot CreateRemoteSnapshot()
+        => new()
+        {
+            ServerTime = DateTimeOffset.Now,
+            IsMonitoring = IsMonitoring,
+            CurrentTask = CurrentTask,
+            MonitorCount = MonitorCount,
+            EnabledCount = EnabledCount,
+            LiveCount = LiveCount,
+            NotDetectedCount = NotDetectedCount,
+            CheckingCount = CheckingCount,
+            FailedCount = FailedCount,
+            Monitors = Monitors.Select(item => new RemoteMonitorDto
+            {
+                Id = item.Id,
+                PlatformId = item.PlatformId,
+                PlatformText = item.PlatformText,
+                DisplayName = item.DisplayName,
+                ProfileUrl = item.ProfileUrl,
+                IsEnabled = item.IsEnabled,
+                StateText = item.StateText,
+                StatusMessage = item.StatusMessage,
+                LastCheckedText = item.LastCheckedText,
+                StreamFormat = item.StreamFormat,
+                StreamUrl = item.StreamUrl
+            }).ToList(),
+            Logs = Logs.TakeLast(120).ToList()
+        };
+
+    public Task StartRemoteMonitoringAsync() => StartMonitoringAsync();
+
+    public Task StopRemoteMonitoringAsync() => StopMonitoringAsync();
+
+    public Task CheckAllRemoteAsync() => CheckAllAsync();
+
+    public async Task<string> AddRemoteMonitorAsync(string url, string? name)
+    {
+        var input = (url ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(input))
+            return "请输入作者主页或直播分享地址。";
+
+        var adapter = _platforms.ResolveByProfileUrl(input);
+        if (adapter is null)
+            return "暂不支持这个地址。当前版本已实现快手适配器。";
+
+        var normalizedUrl = adapter.NormalizeProfileUrl(input);
+        if (Monitors.Any(x => string.Equals(x.ProfileUrl, normalizedUrl, StringComparison.OrdinalIgnoreCase)))
+            return "该地址已经在监控列表中。";
+
+        var target = new LiveMonitorTarget
+        {
+            PlatformId = adapter.Id,
+            ProfileUrl = normalizedUrl,
+            DisplayName = string.IsNullOrWhiteSpace(name)
+                ? BuildDefaultName(normalizedUrl, adapter.DisplayName)
+                : name.Trim(),
+            IsEnabled = true
+        };
+
+        AttachTarget(target);
+        await SaveMonitorsAsync();
+        RefreshCoordinatorState();
+        RaiseMetricsChanged();
+        AddLog($"远程添加监控：{target.DisplayName}（{adapter.DisplayName}）。");
+        return $"已添加监控：{target.DisplayName}";
+    }
+
+    public async Task<string> RemoveRemoteMonitorAsync(string id)
+    {
+        var target = Monitors.FirstOrDefault(x => string.Equals(x.Id, id, StringComparison.Ordinal));
+        if (target is null)
+            return "未找到对应的监控对象。";
+
+        target.PropertyChanged -= Target_PropertyChanged;
+        Monitors.Remove(target);
+        await SaveMonitorsAsync();
+        RefreshCoordinatorState();
+        RaiseMetricsChanged();
+        AddLog($"远程移除监控：{target.DisplayName}。");
+        return $"已移除监控：{target.DisplayName}";
+    }
+
+    public async Task<string> SetRemoteMonitorEnabledAsync(string id, bool enabled)
+    {
+        var target = Monitors.FirstOrDefault(x => string.Equals(x.Id, id, StringComparison.Ordinal));
+        if (target is null)
+            return "未找到对应的监控对象。";
+
+        target.IsEnabled = enabled;
+        await SaveMonitorsAsync();
+        RefreshCoordinatorState();
+        RaiseMetricsChanged();
+        return enabled
+            ? $"已启用监控：{target.DisplayName}"
+            : $"已停用监控：{target.DisplayName}";
+    }
+
+    public async Task<string> CheckRemoteMonitorAsync(string id)
+    {
+        var target = Monitors.FirstOrDefault(x => string.Equals(x.Id, id, StringComparison.Ordinal));
+        if (target is null)
+            return "未找到对应的监控对象。";
+
+        RefreshCoordinatorState();
+        await _coordinator.CheckOneAsync(target.Id);
+        return $"已完成检查：{target.DisplayName}";
     }
 
     private void ToggleTheme()
