@@ -1,5 +1,6 @@
 <linker>
   <assembly fullname="HelloLive.Core">
     <type fullname="HelloLive.Core.Remote.ViewModels.RemoteMainViewModel" preserve="all" />
+    <type fullname="HelloLive.Core.Contracts.RemoteMonitorDto" preserve="all" />
   </assembly>
 </linker>
