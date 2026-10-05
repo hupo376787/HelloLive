@@ -78,3 +78,21 @@ chromium/
 ```
 
 macOS / Linux 默认写入用户应用数据目录，避免程序安装目录不可写。
+
+
+## Remote 控制架构
+
+```text
+HelloLive.Desktop
+  └─ RemoteApiHostService (Kestrel, LAN HTTP)
+       ├─ /api/health
+       ├─ /api/snapshot
+       ├─ /api/actions/*
+       └─ /api/monitors/*
+
+HelloLive.Android ─┐
+HelloLive.iOS     ─┼─> HelloLive.Core.Remote.RemoteApp
+HelloLive.Browser ─┘        └─ RemoteLiveClient -> Desktop API
+```
+
+Android、iOS 与 Browser 均为纯远程控制器，不创建 Playwright、Chromium 或直播解析任务。桌面端是唯一的实际监控执行主机。
