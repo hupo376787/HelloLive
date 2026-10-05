@@ -1,0 +1,437 @@
+<Window
+    x:Class="HelloLive.Core.Views.MainWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:HelloLive.Core.ViewModels"
+    x:DataType="vm:MainWindowViewModel"
+    Title="HelloLive"
+    Width="1500"
+    Height="920"
+    MinWidth="1080"
+    MinHeight="700"
+    WindowStartupLocation="CenterScreen"
+    WindowDecorations="None"
+    ExtendClientAreaToDecorationsHint="True"
+    CanResize="True"
+    Background="Transparent"
+    TransparencyLevelHint="Transparent"
+    TransparencyBackgroundFallback="Transparent">
+
+  <Window.Styles>
+    <Style Selector="Border.card">
+      <Setter Property="Background" Value="{DynamicResource CardColor}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="18" />
+    </Style>
+    <Style Selector="Border.metricCard">
+      <Setter Property="Background" Value="{DynamicResource CardColor}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="14" />
+    </Style>
+    <Style Selector="TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryColor}" />
+    </Style>
+    <Style Selector="TextBlock.caption">
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryColor}" />
+      <Setter Property="FontSize" Value="12" />
+    </Style>
+    <Style Selector="TextBlock.metric">
+      <Setter Property="FontSize" Value="26" />
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+    <Style Selector="TextBox, ComboBox, NumericUpDown">
+      <Setter Property="Background" Value="{DynamicResource InputColor}" />
+      <Setter Property="CornerRadius" Value="7" />
+    </Style>
+    <Style Selector="Button">
+      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="Padding" Value="14,9" />
+    </Style>
+    <Style Selector="Button.primary">
+      <Setter Property="Background" Value="#7C3AED" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.coral">
+      <Setter Property="Background" Value="#FD6F71" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.windowButton">
+      <Setter Property="Width" Value="44" />
+      <Setter Property="Height" Value="36" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="CornerRadius" Value="5" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style Selector="Button.windowButton:pointerover">
+      <Setter Property="Background" Value="{DynamicResource WindowButtonHoverColor}" />
+    </Style>
+    <Style Selector="Button.windowButton.closeButton:pointerover">
+      <Setter Property="Background" Value="#E5484D" />
+    </Style>
+    <Style Selector="ListBox.monitorList ListBoxItem">
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Margin" Value="0,0,18,10" />
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="ListBox.monitorList ListBoxItem:selected">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+  </Window.Styles>
+
+  <Border Margin="1"
+          CornerRadius="8"
+          ClipToBounds="True"
+          Background="{DynamicResource PageBackgroundColor}"
+          BorderBrush="{DynamicResource BorderColor}"
+          BorderThickness="1">
+    <Grid RowDefinitions="74,*">
+      <Border Grid.RowSpan="2">
+        <Border.Background>
+          <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Color="#5B21B6" Offset="0" />
+            <GradientStop Color="#BE185D" Offset="0.48" />
+            <GradientStop Color="#0369A1" Offset="1" />
+          </LinearGradientBrush>
+        </Border.Background>
+      </Border>
+      <Border Grid.RowSpan="2" Background="{DynamicResource BackgroundOverlayColor}" />
+
+      <Grid Grid.Row="0"
+            ColumnDefinitions="Auto,*,Auto"
+            Background="{DynamicResource TitleBarColor}"
+            Panel.ZIndex="100">
+        <Grid Grid.Column="0"
+              Margin="18,8,10,8"
+              ColumnDefinitions="54,Auto"
+              ColumnSpacing="12"
+              VerticalAlignment="Center"
+              PointerPressed="TitleBar_PointerPressed">
+          <Border Width="50" Height="50" CornerRadius="10" Background="#28FFFFFF">
+            <TextBlock Text="HL"
+                       Foreground="White"
+                       FontSize="20"
+                       FontWeight="Bold"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+          </Border>
+          <StackPanel Grid.Column="1" VerticalAlignment="Center">
+            <TextBlock Text="HelloLive" FontSize="23" FontWeight="Bold" Foreground="White" />
+            <TextBlock Text="Avalonia + Playwright · 多平台直播监控" FontSize="12" Foreground="#DFFFFFFF" Margin="0,2,0,0" />
+          </StackPanel>
+        </Grid>
+
+        <Border Grid.Column="1" Background="Transparent" PointerPressed="TitleBar_PointerPressed" />
+
+        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+          <Button Classes="windowButton"
+                  Command="{Binding ToggleThemeCommand}"
+                  ToolTip.Tip="切换主题">
+            <TextBlock Text="{Binding ThemeIcon}" FontSize="17" Foreground="White" />
+          </Button>
+          <Button Classes="windowButton"
+                  Command="{Binding ToggleMonitorPanelCommand}"
+                  ToolTip.Tip="{Binding MonitorPanelButtonText}">
+            <TextBlock Text="☷" FontSize="17" Foreground="White" />
+          </Button>
+          <Button Classes="windowButton" Click="MinimizeButton_Click" ToolTip.Tip="最小化">
+            <TextBlock Text="—" FontSize="18" Foreground="White" />
+          </Button>
+          <Button Classes="windowButton" Click="MaximizeButton_Click" ToolTip.Tip="最大化/还原">
+            <TextBlock Text="□" FontSize="17" Foreground="White" />
+          </Button>
+          <Button Classes="windowButton closeButton" Click="CloseButton_Click" ToolTip.Tip="关闭">
+            <TextBlock Text="×" FontSize="20" Foreground="White" />
+          </Button>
+        </StackPanel>
+      </Grid>
+
+      <Grid Grid.Row="1"
+            Margin="20,14,8,20"
+            ColumnDefinitions="*,Auto">
+        <Grid Grid.Column="0"
+              Margin="0,0,8,0"
+              ColumnDefinitions="410,*"
+              ColumnSpacing="16">
+          <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="14" Margin="0,0,4,0">
+              <Border Classes="card">
+                <StackPanel Spacing="10">
+                  <TextBlock Text="添加监控" FontSize="18" FontWeight="SemiBold" />
+                  <TextBlock Classes="caption"
+                             Text="粘贴作者主页或直播分享地址。短链可由浏览器正常跟随重定向。"
+                             TextWrapping="Wrap" />
+                  <TextBox Text="{Binding NewMonitorUrl, Mode=TwoWay}"
+                           PlaceholderText="https://live.kuaishou.com/u/..."
+                           MinHeight="42" />
+                  <TextBox Text="{Binding NewMonitorName, Mode=TwoWay}"
+                           PlaceholderText="备注名称（可选）"
+                           MinHeight="42" />
+                  <Button Classes="coral"
+                          Content="加入监控列表"
+                          Command="{Binding AddMonitorCommand}" />
+                </StackPanel>
+              </Border>
+
+              <Border Classes="card">
+                <StackPanel Spacing="10">
+                  <TextBlock Text="浏览器" FontSize="18" FontWeight="SemiBold" />
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="无头模式" FontWeight="Medium" />
+                      <TextBlock Classes="caption"
+                                 Text="后台运行 Chromium，不显示浏览器窗口。首次调试可临时关闭。"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1"
+                                  IsChecked="{Binding HeadlessMode, Mode=TwoWay}"
+                                  OnContent="开"
+                                  OffContent="关" />
+                  </Grid>
+                  <CheckBox Content="阻止图片和字体，降低页面资源占用"
+                            IsChecked="{Binding BlockImagesAndFonts, Mode=TwoWay}" />
+                  <Button Content="安装 / 更新 Chromium"
+                          Command="{Binding InstallChromiumCommand}" />
+                  <TextBlock Classes="caption"
+                             Text="{Binding BrowserStatusText}"
+                             TextWrapping="Wrap" />
+                  <StackPanel IsVisible="{Binding IsChromiumInstallProgressVisible}" Spacing="5">
+                    <ProgressBar Minimum="0" Maximum="100" Height="8"
+                                 IsIndeterminate="{Binding IsChromiumInstallProgressIndeterminate}"
+                                 Value="{Binding ChromiumInstallProgressPercent}" />
+                    <TextBlock Classes="caption" Text="{Binding ChromiumInstallProgressText}" />
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+
+              <Border Classes="card">
+                <StackPanel Spacing="10">
+                  <TextBlock Text="监控策略" FontSize="18" FontWeight="SemiBold" />
+                  <Grid ColumnDefinitions="*,120" ColumnSpacing="12">
+                    <StackPanel>
+                      <TextBlock Text="最大并发页面" FontWeight="Medium" />
+                      <TextBlock Classes="caption" Text="建议 3～5；默认 4。" />
+                    </StackPanel>
+                    <NumericUpDown Grid.Column="1"
+                                   Minimum="1" Maximum="8" Increment="1"
+                                   Value="{Binding MaxConcurrentPages, Mode=TwoWay}" />
+                  </Grid>
+                  <Grid ColumnDefinitions="*,120" ColumnSpacing="12">
+                    <StackPanel>
+                      <TextBlock Text="轮询间隔（秒）" FontWeight="Medium" />
+                      <TextBlock Classes="caption" Text="每轮完成后等待再检查。" />
+                    </StackPanel>
+                    <NumericUpDown Grid.Column="1"
+                                   Minimum="10" Maximum="3600" Increment="10"
+                                   Value="{Binding CheckIntervalSeconds, Mode=TwoWay}" />
+                  </Grid>
+                  <Grid ColumnDefinitions="*,120" ColumnSpacing="12">
+                    <StackPanel>
+                      <TextBlock Text="单页超时（秒）" FontWeight="Medium" />
+                      <TextBlock Classes="caption" Text="页面未发现流时结束本次检查。" />
+                    </StackPanel>
+                    <NumericUpDown Grid.Column="1"
+                                   Minimum="5" Maximum="120" Increment="5"
+                                   Value="{Binding CheckTimeoutSeconds, Mode=TwoWay}" />
+                  </Grid>
+                  <CheckBox Content="启动 HelloLive 后自动开始监控"
+                            IsChecked="{Binding AutoStartMonitoring, Mode=TwoWay}" />
+                  <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                    <Button Classes="coral"
+                            Content="开始监控"
+                            Command="{Binding StartMonitoringCommand}" />
+                    <Button Grid.Column="1"
+                            Content="停止监控"
+                            Command="{Binding StopMonitoringCommand}" />
+                  </Grid>
+                  <Button Classes="primary"
+                          Content="立即检查全部"
+                          Command="{Binding CheckAllCommand}" />
+                  <TextBlock Classes="caption"
+                             Text="每个检查只临时创建 Page；抓到 FLV/HLS 后立即中止媒体下载并关闭 Page。"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+              </Border>
+
+              <Border Classes="card">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="平台适配器" FontSize="18" FontWeight="SemiBold" />
+                  <TextBlock Classes="caption"
+                             Text="当前已实现快手。平台识别、网络流识别和 JSON 播放地址解析均通过 ILivePlatformAdapter 隔离；后续分析抖音等平台时无需修改监控调度和 UI 主流程。"
+                             TextWrapping="Wrap" />
+                  <ItemsControl ItemsSource="{Binding Platforms}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:CompileBindings="False">
+                        <Border Margin="0,4,0,0" Padding="10,7" CornerRadius="7" Background="#18FFFFFF">
+                          <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding DisplayName}" FontWeight="Medium" />
+                            <TextBlock Grid.Column="1" Classes="caption" Text="{Binding Id}" />
+                          </Grid>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </ScrollViewer>
+
+          <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" RowSpacing="14">
+            <UniformGrid Columns="6">
+              <Border Classes="metricCard" Margin="0,0,7,0"><StackPanel><TextBlock Classes="caption" Text="监控总数"/><TextBlock Classes="metric" Text="{Binding MonitorCount}" Foreground="#8B5CF6"/></StackPanel></Border>
+              <Border Classes="metricCard" Margin="0,0,7,0"><StackPanel><TextBlock Classes="caption" Text="已启用"/><TextBlock Classes="metric" Text="{Binding EnabledCount}" Foreground="#06B6D4"/></StackPanel></Border>
+              <Border Classes="metricCard" Margin="0,0,7,0"><StackPanel><TextBlock Classes="caption" Text="直播中"/><TextBlock Classes="metric" Text="{Binding LiveCount}" Foreground="#10B981"/></StackPanel></Border>
+              <Border Classes="metricCard" Margin="0,0,7,0"><StackPanel><TextBlock Classes="caption" Text="未检测到"/><TextBlock Classes="metric" Text="{Binding NotDetectedCount}" Foreground="#F59E0B"/></StackPanel></Border>
+              <Border Classes="metricCard" Margin="0,0,7,0"><StackPanel><TextBlock Classes="caption" Text="检查中"/><TextBlock Classes="metric" Text="{Binding CheckingCount}" Foreground="#EC4899"/></StackPanel></Border>
+              <Border Classes="metricCard"><StackPanel><TextBlock Classes="caption" Text="失败"/><TextBlock Classes="metric" Text="{Binding FailedCount}" Foreground="#F43F5E"/></StackPanel></Border>
+            </UniformGrid>
+
+            <Border Grid.Row="1" Classes="card">
+              <Grid ColumnDefinitions="88,8,*" ColumnSpacing="12">
+                <Border Width="88" Height="88" CornerRadius="44" Background="#22FFFFFF" BorderBrush="#40FFFFFF" BorderThickness="1">
+                  <TextBlock Text="LIVE" Foreground="#FD6F71" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <Border Grid.Column="1" Width="8" CornerRadius="3" Background="#A78BFA" />
+                <StackPanel Grid.Column="2" Spacing="5" VerticalAlignment="Center">
+                  <TextBlock Classes="caption" Text="当前状态" />
+                  <TextBlock Text="{Binding MonitoringStatusText}" FontSize="17" FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding CurrentTask}" TextWrapping="Wrap" />
+                  <TextBlock Classes="caption" Text="1 个 Chromium · 临时 Page · 有限并发" />
+                </StackPanel>
+              </Grid>
+            </Border>
+
+            <Border Grid.Row="2" Classes="card">
+              <Grid RowDefinitions="Auto,*">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="运行日志" FontSize="18" FontWeight="SemiBold" />
+                  <TextBlock Grid.Column="1" Classes="caption" Text="最多保留 500 条" />
+                </Grid>
+                <ScrollViewer Grid.Row="1"
+                              Margin="0,12,-18,0"
+                              HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto">
+                  <ItemsControl ItemsSource="{Binding Logs}" Margin="0,0,18,0">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:CompileBindings="False">
+                        <TextBlock Text="{Binding}" FontSize="12" TextWrapping="Wrap" Margin="8,5" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </ScrollViewer>
+              </Grid>
+            </Border>
+          </Grid>
+        </Grid>
+
+        <Border Grid.Column="1"
+                Width="390"
+                Margin="0,0,8,0"
+                Classes="card"
+                IsVisible="{Binding IsMonitorPanelVisible}">
+          <Grid RowDefinitions="Auto,Auto,*">
+            <StackPanel>
+              <TextBlock Text="监控列表" FontSize="19" FontWeight="SemiBold" />
+              <TextBlock Classes="caption"
+                         Text="启用的对象会按轮询周期检查；发现直播后保留当前签名流地址。"
+                         Margin="0,3,0,0"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+
+            <Border Grid.Row="1" Background="#1FFFFFFF" CornerRadius="7" Padding="10,8" Margin="0,12,0,10">
+              <TextBlock Classes="caption"
+                         Text="流地址通常带时效签名。HelloLive 只读取普通公开页面正常产生的网络请求，不绕过登录、验证码或私密访问控制。"
+                         TextWrapping="Wrap" />
+            </Border>
+
+            <ListBox Grid.Row="2"
+                     Margin="0,0,-18,0"
+                     Classes="monitorList"
+                     ItemsSource="{Binding Monitors}"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     SelectionMode="Single"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:CompileBindings="False">
+                  <Border Background="{DynamicResource MonitorItemColor}"
+                          BorderBrush="{DynamicResource BorderColor}"
+                          BorderThickness="1"
+                          CornerRadius="9"
+                          Padding="11">
+                    <StackPanel Spacing="8">
+                      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                        <ToggleSwitch IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                      VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" Spacing="2">
+                          <TextBlock Text="{Binding DisplayName}"
+                                     FontSize="15"
+                                     FontWeight="SemiBold"
+                                     TextTrimming="CharacterEllipsis" />
+                          <TextBlock Classes="caption"
+                                     Text="{Binding ProfileUrl}"
+                                     TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <Border Grid.Column="2"
+                                Padding="7,3"
+                                CornerRadius="8"
+                                Background="#267C3AED"
+                                BorderBrush="#557C3AED"
+                                BorderThickness="1"
+                                VerticalAlignment="Top">
+                          <TextBlock Text="{Binding PlatformText}" FontSize="11" FontWeight="SemiBold" />
+                        </Border>
+                      </Grid>
+
+                      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                        <TextBlock Text="{Binding StateIcon}" FontSize="17" Foreground="#10B981" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" Spacing="2">
+                          <TextBlock Text="{Binding StateText}" FontWeight="Medium" />
+                          <TextBlock Classes="caption" Text="{Binding StatusMessage}" TextWrapping="Wrap" />
+                          <TextBlock Classes="caption" Text="{Binding LastCheckedText}" />
+                          <TextBlock Classes="caption"
+                                     Text="{Binding StreamFormat, StringFormat='流格式：{0}'}"
+                                     IsVisible="{Binding HasStreamUrl}" />
+                        </StackPanel>
+                      </Grid>
+
+                      <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="6">
+                        <Button Content="立即检查"
+                                Padding="10,6"
+                                Tag="{Binding}"
+                                Click="CheckTargetButton_Click" />
+                        <Button Grid.Column="1"
+                                Content="复制流"
+                                Padding="10,6"
+                                IsEnabled="{Binding HasStreamUrl}"
+                                Tag="{Binding}"
+                                Click="CopyStreamButton_Click" />
+                        <Button Grid.Column="2"
+                                Content="打开"
+                                Padding="10,6"
+                                Tag="{Binding}"
+                                Click="OpenProfileButton_Click" />
+                        <Button Grid.Column="3"
+                                Content="移除"
+                                Padding="10,6"
+                                Tag="{Binding}"
+                                Click="RemoveMonitorButton_Click" />
+                      </Grid>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Grid>
+        </Border>
+      </Grid>
+    </Grid>
+  </Border>
+</Window>
