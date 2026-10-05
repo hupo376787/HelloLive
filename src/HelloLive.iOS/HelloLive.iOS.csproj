@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-ios</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <SupportedOSPlatformVersion>13.0</SupportedOSPlatformVersion>
+    <ApplicationTitle>HelloLive Remote</ApplicationTitle>
+    <ApplicationId>com.xiaowei.hellolive</ApplicationId>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
+    <CodesignConfigureDependsOn>$(CodesignConfigureDependsOn);DisableCodesignInSimulator</CodesignConfigureDependsOn>
+  </PropertyGroup>
+
+  <Target Name="DisableCodesignInSimulator" Condition="'$(SdkIsSimulator)' == 'true'">
+    <PropertyGroup>
+      <EnableCodeSigning>false</EnableCodeSigning>
+    </PropertyGroup>
+  </Target>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HelloLive.Core\HelloLive.Core.csproj" />
+    <PackageReference Include="Avalonia.iOS" Version="12.1.0" />
+  </ItemGroup>
+</Project>
