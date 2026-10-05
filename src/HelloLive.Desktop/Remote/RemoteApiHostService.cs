@@ -113,7 +113,7 @@ public sealed class RemoteApiHostService : IAsyncDisposable
             });
 
             app.MapGet("/api/snapshot", async () =>
-                await InvokeOnUiAsync(_viewModel.CreateRemoteSnapshot));
+                await InvokeOnUi(_viewModel.CreateRemoteSnapshot));
 
             app.MapPost("/api/actions/{action}", async (string action) =>
             {
@@ -279,7 +279,7 @@ public sealed class RemoteApiHostService : IAsyncDisposable
         }
     }
 
-    private static Task<T> InvokeOnUiAsync<T>(Func<T> action)
+    private static Task<T> InvokeOnUi<T>(Func<T> action)
     {
         if (Dispatcher.UIThread.CheckAccess())
             return Task.FromResult(action());
