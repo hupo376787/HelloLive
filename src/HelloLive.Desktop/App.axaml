@@ -1,0 +1,39 @@
+<Application
+    x:Class="HelloLive.Desktop.App"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    RequestedThemeVariant="Light">
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Light">
+          <Color x:Key="PageBackgroundColor">#FFF0F3FA</Color>
+          <Color x:Key="BackgroundOverlayColor">#90EEF2F9</Color>
+          <Color x:Key="TitleBarColor">#48FFFFFF</Color>
+          <Color x:Key="CardColor">#DCFFFFFF</Color>
+          <Color x:Key="TextPrimaryColor">#FF172033</Color>
+          <Color x:Key="TextSecondaryColor">#FF667085</Color>
+          <Color x:Key="InputColor">#E5FFFFFF</Color>
+          <Color x:Key="BorderColor">#66FFFFFF</Color>
+          <Color x:Key="MonitorItemColor">#B8FFFFFF</Color>
+          <Color x:Key="WindowButtonHoverColor">#28FFFFFF</Color>
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Dark">
+          <Color x:Key="PageBackgroundColor">#FF0C1020</Color>
+          <Color x:Key="BackgroundOverlayColor">#B50B1020</Color>
+          <Color x:Key="TitleBarColor">#5A111726</Color>
+          <Color x:Key="CardColor">#C71A2034</Color>
+          <Color x:Key="TextPrimaryColor">#FFF5F7FF</Color>
+          <Color x:Key="TextSecondaryColor">#FFAAB3C7</Color>
+          <Color x:Key="InputColor">#D4232B43</Color>
+          <Color x:Key="BorderColor">#42FFFFFF</Color>
+          <Color x:Key="MonitorItemColor">#B0262D43</Color>
+          <Color x:Key="WindowButtonHoverColor">#24FFFFFF</Color>
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+  <Application.Styles>
+    <FluentTheme />
+  </Application.Styles>
+</Application>
