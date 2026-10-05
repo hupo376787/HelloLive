@@ -18,7 +18,7 @@ HelloLive 是一个基于 **.NET 10 + Avalonia 12 + Microsoft.Playwright 1.61.0*
   - `yximgs.com` / `kwaicdn.com` 等直播 CDN 上的 HTTP-FLV / HLS 请求
   - JSON 接口中直接返回的 FLV/HLS URL
 - 监控列表持久化到 `monitors.json`，设置保存到 `settings.json`。
-- Windows / Linux / macOS 桌面运行时架构已保留。
+- Windows / Linux / macOS 为实际监控主机；Android / iOS / Browser 已增加为远程遥控端，不运行 Playwright。
 
 ## 多平台扩展
 
@@ -89,3 +89,23 @@ HelloLive 的首版实现只分析普通公开网页在正常浏览器访问过�
 - 批量破解或伪造平台鉴权签名。
 
 直播 CDN URL 通常包含时效签名，因此监控列表里保存的流地址只代表**当前检查时刻**抓到的地址，过期后需要重新检查。
+
+
+## 远程控制端
+
+HelloLive 现在包含 3 个只用于遥控桌面主机的客户端：
+
+```text
+HelloLive.Android
+HelloLive.iOS
+HelloLive.Browser
+```
+
+桌面端设置区可开启“远程控制服务器”，默认端口为 `5088`，并显示局域网访问地址和随机访问令牌。远程端连接后可以：
+
+- 查看监控统计、当前任务、桌面端日志和监控列表；
+- 开始/停止周期监控；
+- 立即检查全部或单个监控对象；
+- 添加、启用/停用、移除监控对象。
+
+Android / iOS / Browser 项目不引用 Microsoft.Playwright，也不会在客户端启动 Chromium；所有监控任务始终在桌面 HelloLive 主机执行。
