@@ -68,6 +68,8 @@
       <Setter Property="CornerRadius" Value="5" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="White" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="Button.windowButton:pointerover">
       <Setter Property="Background" Value="{DynamicResource WindowButtonHoverColor}" />
@@ -130,25 +132,61 @@
 
         <Border Grid.Column="1" Background="Transparent" PointerPressed="TitleBar_PointerPressed" />
 
-        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+        <StackPanel Grid.Column="2"
+                    Orientation="Horizontal"
+                    Spacing="0"
+                    Margin="0"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top">
           <Button Classes="windowButton"
                   Command="{Binding ToggleThemeCommand}"
                   ToolTip.Tip="切换主题">
-            <TextBlock Text="{Binding ThemeIcon}" FontSize="17" Foreground="White" />
+            <TextBlock Text="{Binding ThemeIcon}"
+                       FontSize="17"
+                       FontWeight="SemiBold"
+                       Foreground="White"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
           </Button>
           <Button Classes="windowButton"
                   Command="{Binding ToggleMonitorPanelCommand}"
                   ToolTip.Tip="{Binding MonitorPanelButtonText}">
-            <TextBlock Text="☷" FontSize="17" Foreground="White" />
+            <Grid Width="16" Height="16">
+              <Border BorderBrush="White"
+                      BorderThickness="1.5"
+                      CornerRadius="2" />
+              <Border Width="1.5"
+                      Height="11"
+                      Margin="0,0,3,0"
+                      Background="White"
+                      HorizontalAlignment="Right"
+                      VerticalAlignment="Center" />
+            </Grid>
           </Button>
           <Button Classes="windowButton" Click="MinimizeButton_Click" ToolTip.Tip="最小化">
-            <TextBlock Text="—" FontSize="18" Foreground="White" />
+            <Viewbox Width="14" Height="14" Stretch="Uniform">
+              <Path Data="M 1,7 L 13,7"
+                    Stroke="White"
+                    StrokeThickness="1.5"
+                    StrokeLineCap="Round" />
+            </Viewbox>
           </Button>
           <Button Classes="windowButton" Click="MaximizeButton_Click" ToolTip.Tip="最大化/还原">
-            <TextBlock Text="□" FontSize="17" Foreground="White" />
+            <Viewbox Width="14" Height="14" Stretch="Uniform">
+              <Rectangle Width="10"
+                         Height="10"
+                         Stroke="White"
+                         StrokeThickness="1"
+                         Fill="Transparent" />
+            </Viewbox>
           </Button>
           <Button Classes="windowButton closeButton" Click="CloseButton_Click" ToolTip.Tip="关闭">
-            <TextBlock Text="×" FontSize="20" Foreground="White" />
+            <Viewbox Width="14" Height="14" Stretch="Uniform">
+              <Path Data="M 2,2 L 12,12 M 12,2 L 2,12"
+                    Stroke="White"
+                    StrokeThickness="1.5"
+                    StrokeLineCap="Round" />
+            </Viewbox>
           </Button>
         </StackPanel>
       </Grid>
@@ -256,6 +294,48 @@
                           Command="{Binding CheckAllCommand}" />
                   <TextBlock Classes="caption"
                              Text="每个检查只临时创建 Page；抓到 FLV/HLS 后立即中止媒体下载并关闭 Page。"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+              </Border>
+
+              <Border Classes="card">
+                <StackPanel Spacing="10">
+                  <TextBlock Text="远程控制服务器" FontSize="18" FontWeight="SemiBold" />
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="允许 Android / iOS / Browser 遥控" FontWeight="Medium" />
+                      <TextBlock Classes="caption"
+                                 Text="移动端与 Browser 端只作为远程控制器，不在本机运行 Playwright 或直播监控任务。"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1"
+                                  IsChecked="{Binding RemoteApiEnabled, Mode=TwoWay}"
+                                  OnContent="开"
+                                  OffContent="关"
+                                  VerticalAlignment="Center" />
+                  </Grid>
+                  <Grid ColumnDefinitions="*,120" ColumnSpacing="12">
+                    <StackPanel VerticalAlignment="Center">
+                      <TextBlock Text="服务端口" FontWeight="Medium" />
+                      <TextBlock Classes="caption" Text="修改端口后，已启用的服务器会自动重启。" />
+                    </StackPanel>
+                    <NumericUpDown Grid.Column="1"
+                                   Minimum="1024"
+                                   Maximum="65535"
+                                   Increment="1"
+                                   Value="{Binding RemoteApiPort, Mode=TwoWay}" />
+                  </Grid>
+                  <TextBlock Classes="caption" Text="访问令牌" />
+                  <TextBox Text="{Binding RemoteApiToken}"
+                           IsReadOnly="True"
+                           FontFamily="Consolas,Menlo,Monospace"
+                           TextWrapping="Wrap"
+                           MinHeight="40" />
+                  <TextBlock Classes="caption"
+                             Text="{Binding RemoteApiStatusText}"
+                             TextWrapping="Wrap" />
+                  <TextBlock Classes="caption"
+                             Text="手机请填写上面状态中显示的局域网地址；Browser 端也通过同一 HTTP API 遥控桌面 HelloLive。"
                              TextWrapping="Wrap" />
                 </StackPanel>
               </Border>
