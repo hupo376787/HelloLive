@@ -1,0 +1,66 @@
+<Application
+    x:Class="HelloLive.Core.Remote.RemoteApp"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    RequestedThemeVariant="Dark">
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Light">
+          <LinearGradientBrush x:Key="RemoteBackgroundBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Color="#EEF4FF" Offset="0" />
+            <GradientStop Color="#FFF1F7" Offset="0.48" />
+            <GradientStop Color="#ECFEFF" Offset="1" />
+          </LinearGradientBrush>
+          <SolidColorBrush x:Key="RemoteCardBackgroundBrush" Color="#EFFFFFFF" />
+          <SolidColorBrush x:Key="RemoteCardBorderBrush" Color="#306366F1" />
+          <SolidColorBrush x:Key="RemoteCaptionBrush" Color="#64748B" />
+          <SolidColorBrush x:Key="RemotePrimaryTextBrush" Color="#172033" />
+          <SolidColorBrush x:Key="RemoteItemBrush" Color="#AFFFFFFF" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Dark">
+          <LinearGradientBrush x:Key="RemoteBackgroundBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Color="#0B1020" Offset="0" />
+            <GradientStop Color="#18112B" Offset="0.52" />
+            <GradientStop Color="#071B28" Offset="1" />
+          </LinearGradientBrush>
+          <SolidColorBrush x:Key="RemoteCardBackgroundBrush" Color="#D91A2032" />
+          <SolidColorBrush x:Key="RemoteCardBorderBrush" Color="#38A5B4FC" />
+          <SolidColorBrush x:Key="RemoteCaptionBrush" Color="#B7C4CEDF" />
+          <SolidColorBrush x:Key="RemotePrimaryTextBrush" Color="#FFFFFFFF" />
+          <SolidColorBrush x:Key="RemoteItemBrush" Color="#A6262D43" />
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+  <Application.Styles>
+    <FluentTheme />
+    <Style Selector="Border.card">
+      <Setter Property="Background" Value="{DynamicResource RemoteCardBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource RemoteCardBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="14" />
+      <Setter Property="Padding" Value="16" />
+    </Style>
+    <Style Selector="TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource RemotePrimaryTextBrush}" />
+    </Style>
+    <Style Selector="TextBlock.caption">
+      <Setter Property="Foreground" Value="{DynamicResource RemoteCaptionBrush}" />
+      <Setter Property="FontSize" Value="12" />
+    </Style>
+    <Style Selector="Button.action">
+      <Setter Property="MinHeight" Value="42" />
+      <Setter Property="CornerRadius" Value="9" />
+      <Setter Property="Padding" Value="14,8" />
+    </Style>
+    <Style Selector="Button.action.primary">
+      <Setter Property="Background" Value="#7C3AED" />
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style Selector="Button.action.coral">
+      <Setter Property="Background" Value="#FD6F71" />
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+  </Application.Styles>
+</Application>
