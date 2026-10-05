@@ -1,0 +1,234 @@
+<UserControl
+    x:Class="HelloLive.Core.Remote.Views.RemoteMainView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:HelloLive.Core.Remote.ViewModels"
+    x:DataType="vm:RemoteMainViewModel">
+
+  <Grid Background="{DynamicResource RemoteBackgroundBrush}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Margin="18,18,18,28"
+                  Spacing="14"
+                  MaxWidth="920"
+                  HorizontalAlignment="Center">
+        <Grid ColumnDefinitions="*,Auto" Margin="2,0">
+          <StackPanel>
+            <TextBlock Text="HelloLive Remote"
+                       FontSize="26"
+                       FontWeight="Bold" />
+            <TextBlock Classes="caption"
+                       Text="Android · iOS · Browser 仅作为桌面 HelloLive 的远程遥控端"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+          <Button Grid.Column="1"
+                  Width="44"
+                  Height="44"
+                  Padding="0"
+                  CornerRadius="22"
+                  Command="{Binding ToggleThemeCommand}"
+                  ToolTip.Tip="切换远程端主题">
+            <TextBlock Text="{Binding ThemeIcon}" FontSize="17" />
+          </Button>
+        </Grid>
+
+        <Border Classes="card">
+          <StackPanel Spacing="10">
+            <TextBlock Text="连接桌面端" FontSize="18" FontWeight="SemiBold" />
+            <TextBlock Classes="caption"
+                       Text="{Binding ConnectionHint}"
+                       TextWrapping="Wrap" />
+            <TextBox Text="{Binding ServerAddress, Mode=TwoWay}"
+                     PlaceholderText="http://192.168.1.100:5088"
+                     MinHeight="42" />
+            <TextBox Text="{Binding AccessToken, Mode=TwoWay}"
+                     PlaceholderText="访问令牌"
+                     MinHeight="42" />
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+              <Button Classes="action primary"
+                      Content="连接 / 重新连接"
+                      Command="{Binding ConnectCommand}" />
+              <Button Grid.Column="1"
+                      Classes="action"
+                      Content="刷新"
+                      Command="{Binding RefreshCommand}" />
+            </Grid>
+            <TextBlock Text="{Binding ConnectionText}"
+                       Classes="caption"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <UniformGrid Columns="3">
+          <Border Classes="card" Margin="0,0,7,7">
+            <StackPanel>
+              <TextBlock Classes="caption" Text="监控总数" />
+              <TextBlock Text="{Binding MonitorCount}" FontSize="25" FontWeight="Bold" Foreground="#8B5CF6" />
+            </StackPanel>
+          </Border>
+          <Border Classes="card" Margin="0,0,7,7">
+            <StackPanel>
+              <TextBlock Classes="caption" Text="已启用" />
+              <TextBlock Text="{Binding EnabledCount}" FontSize="25" FontWeight="Bold" Foreground="#06B6D4" />
+            </StackPanel>
+          </Border>
+          <Border Classes="card" Margin="0,0,0,7">
+            <StackPanel>
+              <TextBlock Classes="caption" Text="直播中" />
+              <TextBlock Text="{Binding LiveCount}" FontSize="25" FontWeight="Bold" Foreground="#10B981" />
+            </StackPanel>
+          </Border>
+          <Border Classes="card" Margin="0,0,7,0">
+            <StackPanel>
+              <TextBlock Classes="caption" Text="未检测到" />
+              <TextBlock Text="{Binding NotDetectedCount}" FontSize="25" FontWeight="Bold" Foreground="#F59E0B" />
+            </StackPanel>
+          </Border>
+          <Border Classes="card" Margin="0,0,7,0">
+            <StackPanel>
+              <TextBlock Classes="caption" Text="检查中" />
+              <TextBlock Text="{Binding CheckingCount}" FontSize="25" FontWeight="Bold" Foreground="#EC4899" />
+            </StackPanel>
+          </Border>
+          <Border Classes="card">
+            <StackPanel>
+              <TextBlock Classes="caption" Text="失败" />
+              <TextBlock Text="{Binding FailedCount}" FontSize="25" FontWeight="Bold" Foreground="#F43F5E" />
+            </StackPanel>
+          </Border>
+        </UniformGrid>
+
+        <Border Classes="card">
+          <StackPanel Spacing="10">
+            <TextBlock Text="远程控制" FontSize="18" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding MonitoringStatusText}" FontWeight="Medium" />
+            <TextBlock Classes="caption"
+                       Text="{Binding CurrentTask}"
+                       TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+              <Button Classes="action coral"
+                      Content="开始监控"
+                      Command="{Binding StartMonitoringCommand}" />
+              <Button Grid.Column="1"
+                      Classes="action"
+                      Content="停止监控"
+                      Command="{Binding StopMonitoringCommand}" />
+              <Button Grid.Column="2"
+                      Classes="action primary"
+                      Content="检查全部"
+                      Command="{Binding CheckAllCommand}" />
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <Border Classes="card">
+          <StackPanel Spacing="10">
+            <TextBlock Text="添加监控" FontSize="18" FontWeight="SemiBold" />
+            <TextBox Text="{Binding NewMonitorUrl, Mode=TwoWay}"
+                     PlaceholderText="作者主页或直播分享地址"
+                     MinHeight="42" />
+            <TextBox Text="{Binding NewMonitorName, Mode=TwoWay}"
+                     PlaceholderText="备注名称（可选）"
+                     MinHeight="42" />
+            <Button Classes="action primary"
+                    Content="添加到桌面监控列表"
+                    Command="{Binding AddMonitorCommand}" />
+          </StackPanel>
+        </Border>
+
+        <Border Classes="card">
+          <StackPanel Spacing="10">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="监控列表" FontSize="18" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="1"
+                         Classes="caption"
+                         Text="{Binding MonitorCount, StringFormat='共 {0} 项'}"
+                         VerticalAlignment="Center" />
+            </Grid>
+
+            <ItemsControl ItemsSource="{Binding Monitors}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:CompileBindings="False">
+                  <Border Margin="0,0,0,9"
+                          Padding="11"
+                          CornerRadius="10"
+                          Background="{DynamicResource RemoteItemBrush}"
+                          BorderBrush="{DynamicResource RemoteCardBorderBrush}"
+                          BorderThickness="1">
+                    <StackPanel Spacing="7">
+                      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <StackPanel>
+                          <TextBlock Text="{Binding DisplayName}"
+                                     FontSize="15"
+                                     FontWeight="SemiBold"
+                                     TextTrimming="CharacterEllipsis" />
+                          <TextBlock Classes="caption"
+                                     Text="{Binding ProfileUrl}"
+                                     TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <Border Grid.Column="1"
+                                Padding="7,3"
+                                CornerRadius="8"
+                                Background="#267C3AED">
+                          <TextBlock Text="{Binding PlatformText}" FontSize="11" />
+                        </Border>
+                      </Grid>
+
+                      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                        <CheckBox IsChecked="{Binding IsEnabled}"
+                                  IsHitTestVisible="False"
+                                  VerticalAlignment="Top" />
+                        <StackPanel Grid.Column="1">
+                          <TextBlock Text="{Binding StateText}" FontWeight="Medium" />
+                          <TextBlock Classes="caption"
+                                     Text="{Binding StatusMessage}"
+                                     TextWrapping="Wrap" />
+                          <TextBlock Classes="caption" Text="{Binding LastCheckedText}" />
+                          <TextBlock Classes="caption"
+                                     Text="{Binding StreamFormat, StringFormat='流格式：{0}'}" />
+                        </StackPanel>
+                      </Grid>
+
+                      <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6">
+                        <Button Classes="action"
+                                Content="检查"
+                                Tag="{Binding}"
+                                Click="CheckMonitor_Click" />
+                        <Button Grid.Column="1"
+                                Classes="action"
+                                Content="启用 / 停用"
+                                Tag="{Binding}"
+                                Click="ToggleMonitor_Click" />
+                        <Button Grid.Column="2"
+                                Classes="action"
+                                Content="移除"
+                                Tag="{Binding}"
+                                Click="RemoveMonitor_Click" />
+                      </Grid>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+
+        <Border Classes="card">
+          <StackPanel Spacing="8">
+            <TextBlock Text="桌面端日志" FontSize="18" FontWeight="SemiBold" />
+            <ItemsControl ItemsSource="{Binding Logs}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:CompileBindings="False">
+                  <TextBlock Text="{Binding}"
+                             FontSize="12"
+                             TextWrapping="Wrap"
+                             Margin="0,3" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>
