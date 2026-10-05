@@ -326,7 +326,7 @@
                                    Value="{Binding RemoteApiPort, Mode=TwoWay}" />
                   </Grid>
                   <TextBlock Classes="caption" Text="访问令牌" />
-                  <TextBox Text="{Binding RemoteApiToken}"
+                  <TextBox Text="{Binding RemoteApiToken, Mode=OneWay}"
                            IsReadOnly="True"
                            FontFamily="Consolas,Menlo,Monospace"
                            TextWrapping="Wrap"
