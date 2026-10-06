@@ -339,7 +339,12 @@ public sealed record LiveCheckResult(
             authorName,
             avatarUrl);
 
-    public static LiveCheckResult NotDetected(string id, string? resolvedPageUrl, string? authorId = null)
+    public static LiveCheckResult NotDetected(
+        string id,
+        string? resolvedPageUrl,
+        string? authorId = null,
+        string? authorName = null,
+        string? avatarUrl = null)
         => new(
             id,
             LiveMonitorState.NotDetected,
@@ -347,7 +352,9 @@ public sealed record LiveCheckResult(
             DateTimeOffset.Now,
             null,
             resolvedPageUrl,
-            authorId);
+            authorId,
+            authorName,
+            avatarUrl);
 
     public static LiveCheckResult Error(string id, string message, string? resolvedPageUrl = null)
         => new(id, LiveMonitorState.Error, message, DateTimeOffset.Now, null, resolvedPageUrl);
