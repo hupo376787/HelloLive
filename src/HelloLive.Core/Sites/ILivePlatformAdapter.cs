@@ -51,6 +51,19 @@ public interface ILivePlatformAdapter
     }
 
     /// <summary>
+    /// 从当前页面正常返回的 JSON 中读取作者昵称；用于按 HelloCrab 的“昵称(作者ID)”规则命名录像目录。
+    /// </summary>
+    bool TryParseAuthorName(
+        string responseUrl,
+        string contentType,
+        string responseBody,
+        out string authorName)
+    {
+        authorName = string.Empty;
+        return false;
+    }
+
+    /// <summary>
     /// 为以后接入低资源占用的 HttpClient 直连查询保留入口。
     /// 返回 null 表示当前适配器仍需使用浏览器检查。
     /// </summary>
