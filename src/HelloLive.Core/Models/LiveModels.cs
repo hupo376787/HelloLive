@@ -17,6 +17,7 @@ public sealed class LiveMonitorTarget : ObservableObject
     private string _id = Guid.NewGuid().ToString("N");
     private string _platformId = "kuaishou";
     private string _displayName = string.Empty;
+    private string _authorId = string.Empty;
     private string _profileUrl = string.Empty;
     private bool _isEnabled = true;
     private LiveMonitorState _state = LiveMonitorState.Idle;
@@ -25,6 +26,9 @@ public sealed class LiveMonitorTarget : ObservableObject
     private string? _streamUrl;
     private string? _streamFormat;
     private string? _resolvedPageUrl;
+    private bool _isRecording;
+    private string? _recordingFilePath;
+    private string _recordingStatus = string.Empty;
 
     public string Id
     {
@@ -46,6 +50,12 @@ public sealed class LiveMonitorTarget : ObservableObject
     {
         get => _displayName;
         set => SetProperty(ref _displayName, value ?? string.Empty);
+    }
+
+    public string AuthorId
+    {
+        get => _authorId;
+        set => SetProperty(ref _authorId, value ?? string.Empty);
     }
 
     public string ProfileUrl
@@ -120,6 +130,36 @@ public sealed class LiveMonitorTarget : ObservableObject
     }
 
     [JsonIgnore]
+    public bool IsRecording
+    {
+        get => _isRecording;
+        set => SetProperty(ref _isRecording, value);
+    }
+
+    [JsonIgnore]
+    public string? RecordingFilePath
+    {
+        get => _recordingFilePath;
+        set
+        {
+            if (SetProperty(ref _recordingFilePath, value))
+                OnPropertyChanged(nameof(RecordingFileName));
+        }
+    }
+
+    [JsonIgnore]
+    public string RecordingStatus
+    {
+        get => _recordingStatus;
+        set => SetProperty(ref _recordingStatus, value ?? string.Empty);
+    }
+
+    [JsonIgnore]
+    public string? RecordingFileName => string.IsNullOrWhiteSpace(RecordingFilePath)
+        ? null
+        : Path.GetFileName(RecordingFilePath);
+
+    [JsonIgnore]
     public string PlatformText => PlatformId.ToLowerInvariant() switch
     {
         "kuaishou" => "快手",
@@ -159,7 +199,7 @@ public sealed class LiveMonitorTarget : ObservableObject
         : "尚未检查";
 
     public LiveMonitorTargetSnapshot ToSnapshot()
-        => new(Id, PlatformId, DisplayName, ProfileUrl, IsEnabled);
+        => new(Id, PlatformId, DisplayName, AuthorId, ProfileUrl, IsEnabled);
 
     public void ApplyResult(LiveCheckResult result)
     {
@@ -169,6 +209,15 @@ public sealed class LiveMonitorTarget : ObservableObject
         StreamUrl = result.Stream?.Url;
         StreamFormat = result.Stream?.Format;
         ResolvedPageUrl = result.ResolvedPageUrl;
+        if (!string.IsNullOrWhiteSpace(result.AuthorId))
+            AuthorId = result.AuthorId;
+    }
+
+    public void ApplyRecordingState(LiveRecordingState state)
+    {
+        IsRecording = state.IsRecording;
+        RecordingFilePath = state.FilePath;
+        RecordingStatus = state.Message;
     }
 }
 
@@ -176,6 +225,7 @@ public sealed record LiveMonitorTargetSnapshot(
     string Id,
     string PlatformId,
     string DisplayName,
+    string AuthorId,
     string ProfileUrl,
     bool IsEnabled);
 
@@ -183,7 +233,10 @@ public sealed record LiveStreamInfo(
     string Url,
     string Format,
     string? Quality = null,
-    string? Source = null);
+    string? Source = null,
+    string? RefererUrl = null,
+    string? Origin = null,
+    string? UserAgent = null);
 
 public sealed record LiveCheckResult(
     string TargetId,
@@ -191,20 +244,46 @@ public sealed record LiveCheckResult(
     string Message,
     DateTimeOffset CheckedAt,
     LiveStreamInfo? Stream = null,
-    string? ResolvedPageUrl = null)
+    string? ResolvedPageUrl = null,
+    string? AuthorId = null)
 {
     public static LiveCheckResult Checking(string id)
         => new(id, LiveMonitorState.Checking, "正在检查直播状态…", DateTimeOffset.Now);
 
-    public static LiveCheckResult Live(string id, LiveStreamInfo stream, string? resolvedPageUrl)
-        => new(id, LiveMonitorState.Live, $"已发现 {stream.Format} 直播流", DateTimeOffset.Now, stream, resolvedPageUrl);
+    public static LiveCheckResult Live(
+        string id,
+        LiveStreamInfo stream,
+        string? resolvedPageUrl,
+        string? authorId = null)
+        => new(
+            id,
+            LiveMonitorState.Live,
+            $"已发现 {stream.Format} 直播流",
+            DateTimeOffset.Now,
+            stream,
+            resolvedPageUrl,
+            authorId);
 
-    public static LiveCheckResult NotDetected(string id, string? resolvedPageUrl)
-        => new(id, LiveMonitorState.NotDetected, "本次页面检查未发现直播流", DateTimeOffset.Now, null, resolvedPageUrl);
+    public static LiveCheckResult NotDetected(string id, string? resolvedPageUrl, string? authorId = null)
+        => new(
+            id,
+            LiveMonitorState.NotDetected,
+            "本次页面检查未发现直播流",
+            DateTimeOffset.Now,
+            null,
+            resolvedPageUrl,
+            authorId);
 
     public static LiveCheckResult Error(string id, string message, string? resolvedPageUrl = null)
         => new(id, LiveMonitorState.Error, message, DateTimeOffset.Now, null, resolvedPageUrl);
 }
+
+public sealed record LiveRecordingState(
+    string TargetId,
+    bool IsRecording,
+    string? FilePath,
+    string Message,
+    DateTimeOffset ChangedAt);
 
 public sealed record LiveMonitorOptions(
     bool Headless,
