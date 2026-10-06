@@ -115,33 +115,32 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
                     }
 
                     var body = await response.TextAsync();
-                    if (authorIdFromApi is null
-                        && adapter.TryParseAuthorId(
-                            response.Url,
-                            contentType,
-                            body,
-                            out var parsedAuthorId)
-                        && !string.IsNullOrWhiteSpace(parsedAuthorId))
-                    {
-                        authorIdFromApi = parsedAuthorId;
-                    }
-
-                    if (authorNameFromApi is null
-                        && adapter.TryParseAuthorName(
-                            response.Url,
-                            contentType,
-                            body,
-                            out var parsedAuthorName)
-                        && !string.IsNullOrWhiteSpace(parsedAuthorName))
-                    {
-                        authorNameFromApi = parsedAuthorName;
-                    }
-
                     if (adapter.TryParseApiResponse(response.Url, contentType, body, out var stream))
                     {
+                        if (adapter.TryParseAuthorId(
+                                response.Url,
+                                contentType,
+                                body,
+                                out var parsedAuthorId)
+                            && !string.IsNullOrWhiteSpace(parsedAuthorId))
+                        {
+                            authorIdFromApi = parsedAuthorId;
+                        }
+
+                        if (adapter.TryParseAuthorName(
+                                response.Url,
+                                contentType,
+                                body,
+                                out var parsedAuthorName)
+                            && !string.IsNullOrWhiteSpace(parsedAuthorName))
+                        {
+                            authorNameFromApi = parsedAuthorName;
+                        }
+
                         streamTcs.TrySetResult(stream with
                         {
-                            RefererUrl = page.Url
+                            RefererUrl = page.Url,
+                            AuthorName = authorNameFromApi
                         });
                     }
                 }
