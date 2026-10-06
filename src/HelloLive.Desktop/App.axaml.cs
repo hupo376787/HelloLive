@@ -10,6 +10,7 @@ using HelloLive.Core.Views;
 using HelloLive.Desktop.Chromium;
 using HelloLive.Desktop.Playwright;
 using HelloLive.Desktop.Remote;
+using HelloLive.Desktop.Recording;
 
 namespace HelloLive.Desktop;
 
@@ -34,7 +35,8 @@ public partial class App : Application
 
             var installer = new PlaywrightChromiumInstaller();
             _browser = new PlaywrightLiveBrowserService(installer);
-            var coordinator = new LiveMonitorCoordinator(_browser, platforms);
+            var recorder = new LiveStreamRecorder();
+            var coordinator = new LiveMonitorCoordinator(_browser, platforms, recorder);
             _viewModel = new MainWindowViewModel(
                 _browser,
                 platforms,
