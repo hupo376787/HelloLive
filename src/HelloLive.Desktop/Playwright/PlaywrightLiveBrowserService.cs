@@ -54,6 +54,7 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
         string? resolvedPageUrl = null;
         string? authorIdFromApi = null;
         string? authorNameFromApi = null;
+        string? avatarUrlFromApi = null;
         var authorIdentityTcs = new TaskCompletionSource<bool>(
             TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -135,6 +136,16 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
                         authorNameFromApi = parsedAuthorName;
                     }
 
+                    if (adapter.TryParseAuthorAvatar(
+                            response.Url,
+                            contentType,
+                            body,
+                            out var parsedAvatarUrl)
+                        && !string.IsNullOrWhiteSpace(parsedAvatarUrl))
+                    {
+                        avatarUrlFromApi = parsedAvatarUrl;
+                    }
+
                     if (!string.IsNullOrWhiteSpace(authorIdFromApi))
                         authorIdentityTcs.TrySetResult(true);
 
@@ -211,7 +222,8 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
                     stream,
                     page.Url,
                     authorId,
-                    authorNameFromApi);
+                    authorNameFromApi,
+                    avatarUrlFromApi);
             }
 
             cancellationToken.ThrowIfCancellationRequested();
