@@ -64,6 +64,19 @@ public interface ILivePlatformAdapter
     }
 
     /// <summary>
+    /// 从平台作者资料响应中读取头像 URL。默认不处理。
+    /// </summary>
+    bool TryParseAuthorAvatar(
+        string responseUrl,
+        string contentType,
+        string responseBody,
+        out string avatarUrl)
+    {
+        avatarUrl = string.Empty;
+        return false;
+    }
+
+    /// <summary>
     /// 为以后接入低资源占用的 HttpClient 直连查询保留入口。
     /// 返回 null 表示当前适配器仍需使用浏览器检查。
     /// </summary>
