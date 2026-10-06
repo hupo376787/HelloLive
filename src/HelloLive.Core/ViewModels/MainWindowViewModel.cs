@@ -498,6 +498,12 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
     private void AttachTarget(LiveMonitorTarget target)
     {
+        if (string.IsNullOrWhiteSpace(target.AuthorId))
+        {
+            target.AuthorId = LiveAuthorIdentityHelper.ExtractStableAuthorId(
+                target.ProfileUrl);
+        }
+
         target.PropertyChanged += Target_PropertyChanged;
         Monitors.Add(target);
     }
