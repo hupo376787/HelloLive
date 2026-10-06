@@ -9,9 +9,39 @@ namespace HelloLive.Core.Views;
 
 public partial class MainWindow : Window
 {
+    private bool _allowClose;
+    private bool _shutdownInProgress;
+
     public MainWindow()
     {
         InitializeComponent();
+        Closing += MainWindow_Closing;
+    }
+
+    private async void MainWindow_Closing(
+        object? sender,
+        WindowClosingEventArgs e)
+    {
+        if (_allowClose)
+            return;
+
+        e.Cancel = true;
+        if (_shutdownInProgress)
+            return;
+
+        _shutdownInProgress = true;
+        try
+        {
+            if (DataContext is MainWindowViewModel viewModel)
+                await viewModel.PrepareForShutdownAsync();
+
+            _allowClose = true;
+            Close();
+        }
+        finally
+        {
+            _shutdownInProgress = false;
+        }
     }
 
     private void TitleBar_PointerPressed(object? sender, PointerPressedEventArgs e)
