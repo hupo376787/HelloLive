@@ -63,6 +63,100 @@ public partial class MainWindow : Window
             await clipboard.SetTextAsync(target.StreamUrl);
     }
 
+    private void MonitorItem_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.ClickCount < 2
+            || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed
+            || sender is not Border { DataContext: LiveMonitorTarget target }
+            || DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        // Double-clicking an action button or the enable switch should perform only
+        // that action, not also open the author's folder.
+        var current = e.Source as Control;
+        while (current is not null && !ReferenceEquals(current, sender))
+        {
+            if (current is Button or ToggleSwitch)
+                return;
+
+            current = current.Parent as Control;
+        }
+
+        try
+        {
+            OpenFolder(viewModel.GetMonitorFolderPath(target));
+            e.Handled = true;
+        }
+        catch
+        {
+            // Folder-opening failure must not interrupt monitoring.
+        }
+    }
+
+    private void OpenDownloadRootButton_Click(
+        object? sender,
+        Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+            return;
+
+        try
+        {
+            OpenFolder(viewModel.DownloadRoot);
+        }
+        catch
+        {
+            // Folder-opening failure must not interrupt monitoring.
+        }
+    }
+
+    private static void OpenFolder(string path)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        Directory.CreateDirectory(path);
+
+        if (OperatingSystem.IsWindows())
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                UseShellExecute = true
+            };
+            startInfo.ArgumentList.Add(path);
+            Process.Start(startInfo);
+            return;
+        }
+
+        if (OperatingSystem.IsMacOS())
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "open",
+                UseShellExecute = false
+            };
+            startInfo.ArgumentList.Add(path);
+            Process.Start(startInfo);
+            return;
+        }
+
+        if (OperatingSystem.IsLinux())
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "xdg-open",
+                UseShellExecute = false
+            };
+            startInfo.ArgumentList.Add(path);
+            Process.Start(startInfo);
+            return;
+        }
+
+        throw new PlatformNotSupportedException("当前桌面系统不支持打开文件夹。");
+    }
+
+
     private void OpenProfileButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (sender is not Button { Tag: LiveMonitorTarget target }
