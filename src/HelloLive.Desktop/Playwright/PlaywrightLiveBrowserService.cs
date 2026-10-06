@@ -54,6 +54,8 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
         string? resolvedPageUrl = null;
         string? authorIdFromApi = null;
         string? authorNameFromApi = null;
+        var authorIdentityTcs = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
 
         try
         {
@@ -94,9 +96,6 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
 
             page.Response += async (_, response) =>
             {
-                if (streamTcs.Task.IsCompleted)
-                    return;
-
                 try
                 {
                     response.Headers.TryGetValue("content-type", out var contentType);
@@ -115,28 +114,37 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
                     }
 
                     var body = await response.TextAsync();
-                    if (adapter.TryParseApiResponse(response.Url, contentType, body, out var stream))
+
+                    if (adapter.TryParseAuthorId(
+                            response.Url,
+                            contentType,
+                            body,
+                            out var parsedAuthorId)
+                        && !string.IsNullOrWhiteSpace(parsedAuthorId))
                     {
-                        if (adapter.TryParseAuthorId(
-                                response.Url,
-                                contentType,
-                                body,
-                                out var parsedAuthorId)
-                            && !string.IsNullOrWhiteSpace(parsedAuthorId))
-                        {
-                            authorIdFromApi = parsedAuthorId;
-                        }
+                        authorIdFromApi = parsedAuthorId;
+                    }
 
-                        if (adapter.TryParseAuthorName(
-                                response.Url,
-                                contentType,
-                                body,
-                                out var parsedAuthorName)
-                            && !string.IsNullOrWhiteSpace(parsedAuthorName))
-                        {
-                            authorNameFromApi = parsedAuthorName;
-                        }
+                    if (adapter.TryParseAuthorName(
+                            response.Url,
+                            contentType,
+                            body,
+                            out var parsedAuthorName)
+                        && !string.IsNullOrWhiteSpace(parsedAuthorName))
+                    {
+                        authorNameFromApi = parsedAuthorName;
+                    }
 
+                    if (!string.IsNullOrWhiteSpace(authorIdFromApi))
+                        authorIdentityTcs.TrySetResult(true);
+
+                    if (!streamTcs.Task.IsCompleted
+                        && adapter.TryParseApiResponse(
+                            response.Url,
+                            contentType,
+                            body,
+                            out var stream))
+                    {
                         streamTcs.TrySetResult(stream with
                         {
                             RefererUrl = page.Url,
@@ -178,20 +186,32 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
             if (completed == streamTcs.Task)
             {
                 var stream = await streamTcs.Task;
-                if (!string.IsNullOrWhiteSpace(authorNameFromApi))
+
+                // FLV request can appear slightly before Kuaishou's profile API response.
+                // The media request is already aborted, so keeping the lightweight page
+                // alive for a short grace window costs little and prevents using the
+                // /u/{principalId} value as if it were author.id.
+                if (string.IsNullOrWhiteSpace(authorIdFromApi))
                 {
-                    stream = stream with { AuthorName = authorNameFromApi };
+                    await Task.WhenAny(
+                        authorIdentityTcs.Task,
+                        Task.Delay(TimeSpan.FromMilliseconds(900), cancellationToken));
                 }
+
+                if (!string.IsNullOrWhiteSpace(authorNameFromApi))
+                    stream = stream with { AuthorName = authorNameFromApi };
 
                 var authorId = authorIdFromApi
                                ?? LiveAuthorIdentityHelper.ExtractStableAuthorId(
                                    target.ProfileUrl,
                                    page.Url);
+
                 return LiveCheckResult.Live(
                     target.Id,
                     stream,
                     page.Url,
-                    authorId);
+                    authorId,
+                    authorNameFromApi);
             }
 
             cancellationToken.ThrowIfCancellationRequested();
