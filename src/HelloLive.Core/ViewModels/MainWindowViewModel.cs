@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using HelloLive.Core.Contracts;
 using HelloLive.Core.Models;
 using HelloLive.Core.Services.Browser;
+using HelloLive.Core.Services.Images;
 using HelloLive.Core.Services.Monitoring;
 using HelloLive.Core.Services.Settings;
 using HelloLive.Core.Sites;
@@ -23,6 +24,8 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private readonly SettingsService _settingsService;
     private readonly MonitorStore _monitorStore;
     private readonly AppSettings _settings;
+    private readonly ImageCacheService _imageCache = new();
+    private readonly Dictionary<string, string> _loadedAvatarUrls = new(StringComparer.Ordinal);
     private readonly SemaphoreSlim _saveGate = new(1, 1);
 
     private string _newMonitorUrl = string.Empty;
@@ -395,6 +398,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             return;
 
         await _coordinator.StopRecordingAsync(target.Id);
+        _loadedAvatarUrls.Remove(target.Id);
         target.PropertyChanged -= Target_PropertyChanged;
         Monitors.Remove(target);
         await SaveMonitorsAsync();
@@ -480,6 +484,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
                 return;
 
             target.ApplyResult(result);
+            _ = LoadMonitorAvatarAsync(target);
             CurrentTask = result.State == LiveMonitorState.Checking
                 ? $"正在检查：{target.DisplayName}"
                 : $"{target.DisplayName} · {target.StateText}";
@@ -529,6 +534,34 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
         target.PropertyChanged += Target_PropertyChanged;
         Monitors.Add(target);
+        _ = LoadMonitorAvatarAsync(target);
+    }
+
+    private async Task LoadMonitorAvatarAsync(LiveMonitorTarget target)
+    {
+        var url = target.AvatarUrl?.Trim();
+        if (string.IsNullOrWhiteSpace(url))
+            return;
+
+        if (_loadedAvatarUrls.TryGetValue(target.Id, out var loadedUrl)
+            && string.Equals(loadedUrl, url, StringComparison.Ordinal)
+            && target.AvatarImage is not null)
+        {
+            return;
+        }
+
+        var image = await _imageCache.LoadAsync(url);
+        if (image is null)
+            return;
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!string.Equals(target.AvatarUrl, url, StringComparison.Ordinal))
+                return;
+
+            target.AvatarImage = image;
+            _loadedAvatarUrls[target.Id] = url;
+        });
     }
 
     private void Target_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -539,6 +572,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         if (e.PropertyName is nameof(LiveMonitorTarget.IsEnabled)
             or nameof(LiveMonitorTarget.DisplayName)
             or nameof(LiveMonitorTarget.AuthorId)
+            or nameof(LiveMonitorTarget.AvatarUrl)
             or nameof(LiveMonitorTarget.ProfileUrl))
         {
             if (e.PropertyName == nameof(LiveMonitorTarget.IsEnabled)
@@ -670,6 +704,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             return "未找到对应的监控对象。";
 
         await _coordinator.StopRecordingAsync(target.Id);
+        _loadedAvatarUrls.Remove(target.Id);
         target.PropertyChanged -= Target_PropertyChanged;
         Monitors.Remove(target);
         await SaveMonitorsAsync();
@@ -787,6 +822,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         await _coordinator.DisposeAsync();
         await _settingsService.SaveAsync(_settings);
         await SaveMonitorsAsync();
+        _imageCache.Dispose();
         _saveGate.Dispose();
     }
 }
