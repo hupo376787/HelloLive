@@ -96,3 +96,21 @@ HelloLive.Browser ─┘        └─ RemoteLiveClient -> Desktop API
 ```
 
 Android、iOS 与 Browser 均为纯远程控制器，不创建 Playwright、Chromium 或直播解析任务。桌面端是唯一的实际监控执行主机。
+
+
+## Live Recording
+
+```text
+LiveMonitorCoordinator
+  └─ live result
+      └─ ILiveStreamRecorder
+          ├─ HTTP-FLV -> direct streaming FileStream (.flv)
+          └─ HLS      -> FFmpeg fragmented MP4 (.mp4)
+
+Download/
+  └─ <platform>/
+      └─ <nickname>(<authorId>)/
+          └─ yyyy-MM-dd HH-mm-ss.<ext>
+```
+
+录制连接与 Playwright 页面分离：Playwright 只负责获取当前签名流地址，随后立即关闭临时 Page；录制器使用独立连接持续落盘。这样不会为每个正在录制的作者保留一个 Chromium Page。
