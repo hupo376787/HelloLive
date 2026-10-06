@@ -83,12 +83,8 @@ public sealed class KuaishouLiveAdapter : ILivePlatformAdapter
         if (string.IsNullOrWhiteSpace(responseBody) || responseBody.Length > 2_000_000)
             return false;
 
-        if (!responseUrl.Contains("kuaishou", StringComparison.OrdinalIgnoreCase)
-            && !responseUrl.Contains("gifshow", StringComparison.OrdinalIgnoreCase)
-            && !responseUrl.Contains("chenzhongtech", StringComparison.OrdinalIgnoreCase))
-        {
+        if (!IsAuthorMetadataResponse(responseUrl))
             return false;
-        }
 
         var trimmed = responseBody.AsSpan().TrimStart();
         if (trimmed.IsEmpty || (trimmed[0] != '{' && trimmed[0] != '['))
@@ -260,12 +256,8 @@ public sealed class KuaishouLiveAdapter : ILivePlatformAdapter
         if (string.IsNullOrWhiteSpace(responseBody) || responseBody.Length > 2_000_000)
             return false;
 
-        if (!responseUrl.Contains("kuaishou", StringComparison.OrdinalIgnoreCase)
-            && !responseUrl.Contains("gifshow", StringComparison.OrdinalIgnoreCase)
-            && !responseUrl.Contains("chenzhongtech", StringComparison.OrdinalIgnoreCase))
-        {
+        if (!IsAuthorMetadataResponse(responseUrl))
             return false;
-        }
 
         var trimmed = responseBody.AsSpan().TrimStart();
         if (trimmed.IsEmpty || (trimmed[0] != '{' && trimmed[0] != '['))
@@ -342,6 +334,27 @@ public sealed class KuaishouLiveAdapter : ILivePlatformAdapter
 
         authorName = string.Empty;
         return false;
+    }
+
+    private static bool IsAuthorMetadataResponse(string responseUrl)
+    {
+        if (!Uri.TryCreate(responseUrl, UriKind.Absolute, out var uri))
+            return false;
+
+        var host = uri.Host;
+        if (!host.EndsWith("kuaishou.com", StringComparison.OrdinalIgnoreCase)
+            && !host.EndsWith("gifshow.com", StringComparison.OrdinalIgnoreCase)
+            && !host.EndsWith("chenzhongtech.com", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var path = uri.AbsolutePath.TrimEnd('/');
+        return path.Equals("/live_api/profile/public", StringComparison.OrdinalIgnoreCase)
+               || path.Equals("/rest/v/profile/feed", StringComparison.OrdinalIgnoreCase)
+               || path.Equals("/live_api/baseuser/userinfo/sensitive", StringComparison.OrdinalIgnoreCase)
+               || path.Contains("/live_api/profile/", StringComparison.OrdinalIgnoreCase)
+               || path.Contains("/live_api/baseuser/", StringComparison.OrdinalIgnoreCase);
     }
 
     private static IEnumerable<string> EnumerateStrings(JsonElement element)
