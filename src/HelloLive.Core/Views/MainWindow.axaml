@@ -289,17 +289,21 @@
                   </Grid>
                   <CheckBox Content="启动 HelloLive 后自动开始监控"
                             IsChecked="{Binding AutoStartMonitoring, Mode=TwoWay}" />
-                  <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                  <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
                     <Button Classes="coral"
+                            MinHeight="40"
                             Content="开始监控"
                             Command="{Binding StartMonitoringCommand}" />
                     <Button Grid.Column="1"
+                            MinHeight="40"
                             Content="停止监控"
                             Command="{Binding StopMonitoringCommand}" />
+                    <Button Grid.Column="2"
+                            Classes="primary"
+                            MinHeight="40"
+                            Content="立即检查全部"
+                            Command="{Binding CheckAllCommand}" />
                   </Grid>
-                  <Button Classes="primary"
-                          Content="立即检查全部"
-                          Command="{Binding CheckAllCommand}" />
                   <TextBlock Classes="caption"
                              Text="每个检查只临时创建 Page；抓到 FLV/HLS 后立即中止浏览器媒体下载并关闭 Page，录制器会用独立连接实时落盘。"
                              TextWrapping="Wrap" />
@@ -308,6 +312,10 @@
                   <TextBlock Classes="caption"
                              Text="{Binding DownloadRoot}"
                              TextWrapping="Wrap" />
+                  <Button Content="打开录像目录"
+                          MinHeight="38"
+                          HorizontalAlignment="Stretch"
+                          Click="OpenDownloadRootButton_Click" />
                   <TextBlock Classes="caption"
                              Text="目录结构与 HelloCrab 一致：Download / 平台 / 昵称(作者ID) / yyyy-MM-dd HH-mm-ss.flv"
                              TextWrapping="Wrap" />
@@ -436,7 +444,7 @@
             <StackPanel>
               <TextBlock Text="监控列表" FontSize="19" FontWeight="SemiBold" />
               <TextBlock Classes="caption"
-                         Text="作者头像、身份、直播状态与录像状态集中显示。"
+                         Text="作者头像、身份、直播状态与录像状态集中显示；双击作者卡片可打开对应录像文件夹。"
                          Margin="0,3,0,0"
                          TextWrapping="Wrap" />
             </StackPanel>
@@ -461,7 +469,9 @@
                           BorderBrush="{DynamicResource BorderColor}"
                           BorderThickness="1"
                           CornerRadius="12"
-                          Padding="12">
+                          Padding="12"
+                          Cursor="Hand"
+                          PointerPressed="MonitorItem_PointerPressed">
                     <StackPanel Spacing="10">
                       <Grid ColumnDefinitions="58,*,Auto" ColumnSpacing="10">
                         <Border Width="54"
