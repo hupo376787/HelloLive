@@ -28,6 +28,7 @@ public sealed class RemoteMonitorDto
     public string PlatformId { get; set; } = string.Empty;
     public string PlatformText { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
+    public string AuthorId { get; set; } = string.Empty;
     public string ProfileUrl { get; set; } = string.Empty;
     public bool IsEnabled { get; set; }
     public string StateText { get; set; } = string.Empty;
@@ -35,6 +36,9 @@ public sealed class RemoteMonitorDto
     public string LastCheckedText { get; set; } = string.Empty;
     public string? StreamFormat { get; set; }
     public string? StreamUrl { get; set; }
+    public bool IsRecording { get; set; }
+    public string? RecordingFilePath { get; set; }
+    public string RecordingStatus { get; set; } = string.Empty;
 }
 
 public sealed class RemoteAddMonitorRequest
