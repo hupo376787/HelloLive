@@ -10,8 +10,8 @@ namespace HelloLive.Desktop.Recording;
 
 /// <summary>
 /// 实时直播录制器。
-/// HTTP-FLV 直接按网络字节流持续写入 .flv；FLV 不依赖文件尾索引，
-/// 即使进程异常退出，已经完整写入的前部标签仍可播放。
+/// HTTP-FLV 按 Tag 实时落盘，并把上游直播时间戳归零到本地录像起点；
+/// FLV 不依赖文件尾索引，即使进程异常退出，已完整落盘的前部 Tag 仍可播放。
 /// HLS 在检测到本机 FFmpeg 时写入 fragmented MP4，避免普通 MP4 因缺少尾部 moov 而损坏。
 /// </summary>
 public sealed class LiveStreamRecorder : ILiveStreamRecorder
@@ -290,27 +290,14 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
             | FileOptions.SequentialScan
             | FileOptions.WriteThrough);
 
-        var buffer = new byte[256 * 1024];
-        var lastFlush = Stopwatch.StartNew();
-
-        while (true)
-        {
-            var read = await input.ReadAsync(buffer.AsMemory(), cancellationToken);
-            if (read == 0)
-                break;
-
-            await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
-
-            // 周期性落盘。FLV 本身是顺序 Tag 结构，不依赖文件尾 moov；
-            // 即使程序崩溃，也只会丢失最后尚未完整写入的一小段。
-            if (lastFlush.Elapsed >= TimeSpan.FromSeconds(2))
-            {
-                await output.FlushAsync(cancellationToken);
-                lastFlush.Restart();
-            }
-        }
-
-        await output.FlushAsync(cancellationToken);
+        // 不再把 HTTP-FLV 原始字节直接复制到文件：
+        // 快手直播流的 Tag 时间戳可能从主播开播时刻开始。例如本地只录 28 分钟，
+        // 上游首个 Tag 已经是 2 小时左右，播放器就会错误显示 2:29:48。
+        // FlvStreamWriter 会把首个音/视频 Tag 归零，并且只写入完整 Tag。
+        await FlvStreamWriter.CopyNormalizedAsync(
+            input,
+            output,
+            cancellationToken);
     }
 
     private static async Task RecordHlsWithFfmpegAsync(
