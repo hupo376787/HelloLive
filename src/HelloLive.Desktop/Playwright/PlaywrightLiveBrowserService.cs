@@ -53,6 +53,7 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
         var stopwatch = Stopwatch.StartNew();
         string? resolvedPageUrl = null;
         string? authorIdFromApi = null;
+        string? authorNameFromApi = null;
 
         try
         {
@@ -125,6 +126,17 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
                         authorIdFromApi = parsedAuthorId;
                     }
 
+                    if (authorNameFromApi is null
+                        && adapter.TryParseAuthorName(
+                            response.Url,
+                            contentType,
+                            body,
+                            out var parsedAuthorName)
+                        && !string.IsNullOrWhiteSpace(parsedAuthorName))
+                    {
+                        authorNameFromApi = parsedAuthorName;
+                    }
+
                     if (adapter.TryParseApiResponse(response.Url, contentType, body, out var stream))
                     {
                         streamTcs.TrySetResult(stream with
@@ -167,6 +179,11 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
             if (completed == streamTcs.Task)
             {
                 var stream = await streamTcs.Task;
+                if (!string.IsNullOrWhiteSpace(authorNameFromApi))
+                {
+                    stream = stream with { AuthorName = authorNameFromApi };
+                }
+
                 var authorId = authorIdFromApi
                                ?? LiveAuthorIdentityHelper.ExtractStableAuthorId(
                                    target.ProfileUrl,
