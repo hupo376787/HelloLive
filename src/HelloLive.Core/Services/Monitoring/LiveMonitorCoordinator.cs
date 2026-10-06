@@ -47,8 +47,14 @@ public sealed class LiveMonitorCoordinator : IAsyncDisposable
 
     public void SetOptions(LiveMonitorOptions options)
     {
+        // Monitor-list probing must never surface Chromium windows.
+        // Keep the Headless field in the shared options model for future explicit
+        // diagnostics, but all scheduled/manual checks of saved monitor targets
+        // are forced to headless here.
+        var normalized = options.Normalize() with { Headless = true };
+
         lock (_sync)
-            _options = options.Normalize();
+            _options = normalized;
     }
 
     public async Task StartAsync()
@@ -131,7 +137,7 @@ public sealed class LiveMonitorCoordinator : IAsyncDisposable
 
     private async Task RunLoopAsync(CancellationToken cancellationToken)
     {
-        Log?.Invoke("浏览器按需创建临时 Page；检测到直播流后立即关闭 Page，并由独立录制连接持续保存直播。");
+        Log?.Invoke("监控列表使用无头 Chromium 按需创建临时 Page；检测到直播流后立即关闭 Page，并由独立录制连接持续保存直播。");
 
         while (!cancellationToken.IsCancellationRequested)
         {
