@@ -37,6 +37,20 @@ public interface ILivePlatformAdapter
         out LiveStreamInfo stream);
 
     /// <summary>
+    /// 从当前页面正常返回的 JSON 中读取平台真实作者 ID。
+    /// 默认不处理；平台适配器可覆盖。该 ID 用于与 HelloCrab 相同的“昵称(作者ID)”目录。
+    /// </summary>
+    bool TryParseAuthorId(
+        string responseUrl,
+        string contentType,
+        string responseBody,
+        out string authorId)
+    {
+        authorId = string.Empty;
+        return false;
+    }
+
+    /// <summary>
     /// 为以后接入低资源占用的 HttpClient 直连查询保留入口。
     /// 返回 null 表示当前适配器仍需使用浏览器检查。
     /// </summary>
