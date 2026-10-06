@@ -236,7 +236,8 @@ public sealed record LiveStreamInfo(
     string? Source = null,
     string? RefererUrl = null,
     string? Origin = null,
-    string? UserAgent = null);
+    string? UserAgent = null,
+    string? AuthorName = null);
 
 public sealed record LiveCheckResult(
     string TargetId,
