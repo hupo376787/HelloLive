@@ -122,6 +122,133 @@ public sealed class KuaishouLiveAdapter : ILivePlatformAdapter
         return false;
     }
 
+
+    public bool TryParseAuthorId(
+        string responseUrl,
+        string contentType,
+        string responseBody,
+        out string authorId)
+    {
+        authorId = string.Empty;
+        if (string.IsNullOrWhiteSpace(responseBody) || responseBody.Length > 2_000_000)
+            return false;
+
+        if (!responseUrl.Contains("kuaishou", StringComparison.OrdinalIgnoreCase)
+            && !responseUrl.Contains("gifshow", StringComparison.OrdinalIgnoreCase)
+            && !responseUrl.Contains("chenzhongtech", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var trimmed = responseBody.AsSpan().TrimStart();
+        if (trimmed.IsEmpty || (trimmed[0] != '{' && trimmed[0] != '['))
+            return false;
+
+        try
+        {
+            using var document = JsonDocument.Parse(responseBody);
+            return TryFindAuthorId(document.RootElement, out authorId);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static bool TryFindAuthorId(JsonElement element, out string authorId)
+    {
+        authorId = string.Empty;
+
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in element.EnumerateObject())
+            {
+                if (property.Value.ValueKind == JsonValueKind.Object
+                    && IsAuthorContainerName(property.Name)
+                    && TryReadAuthorId(property.Value, out authorId))
+                {
+                    return true;
+                }
+            }
+
+            foreach (var property in element.EnumerateObject())
+            {
+                if (TryFindAuthorId(property.Value, out authorId))
+                    return true;
+            }
+        }
+        else if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray())
+            {
+                if (TryFindAuthorId(item, out authorId))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsAuthorContainerName(string name)
+        => name.Equals("author", StringComparison.OrdinalIgnoreCase)
+           || name.Equals("user", StringComparison.OrdinalIgnoreCase)
+           || name.Equals("userinfo", StringComparison.OrdinalIgnoreCase)
+           || name.Equals("userInfo", StringComparison.OrdinalIgnoreCase)
+           || name.Equals("owner", StringComparison.OrdinalIgnoreCase)
+           || name.Equals("profile", StringComparison.OrdinalIgnoreCase);
+
+    private static bool TryReadAuthorId(JsonElement author, out string authorId)
+    {
+        foreach (var propertyName in new[]
+                 {
+                     "id", "eid", "userId", "user_id", "principalId", "kwaiId"
+                 })
+        {
+            if (!TryGetPropertyIgnoreCase(author, propertyName, out var value))
+                continue;
+
+            var text = value.ValueKind switch
+            {
+                JsonValueKind.String => value.GetString(),
+                JsonValueKind.Number => value.GetRawText(),
+                _ => null
+            };
+
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                authorId = text.Trim();
+                return true;
+            }
+        }
+
+        authorId = string.Empty;
+        return false;
+    }
+
+    private static bool TryGetPropertyIgnoreCase(
+        JsonElement element,
+        string propertyName,
+        out JsonElement value)
+    {
+        value = default;
+        if (element.ValueKind != JsonValueKind.Object)
+            return false;
+
+        if (element.TryGetProperty(propertyName, out value))
+            return true;
+
+        foreach (var property in element.EnumerateObject())
+        {
+            if (property.Name.Equals(propertyName, StringComparison.OrdinalIgnoreCase))
+            {
+                value = property.Value;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static IEnumerable<string> EnumerateStrings(JsonElement element)
     {
         switch (element.ValueKind)
