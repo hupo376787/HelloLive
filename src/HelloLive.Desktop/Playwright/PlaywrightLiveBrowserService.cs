@@ -1,6 +1,7 @@
 using HelloLive.Core.Models;
 using HelloLive.Core.Services.Browser;
 using HelloLive.Core.Sites;
+using HelloLive.Core.Utilities;
 using HelloLive.Desktop.Chromium;
 using Microsoft.Playwright;
 using System.Diagnostics;
@@ -61,7 +62,15 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
                     var request = route.Request;
                     if (adapter.TryParseStreamRequest(request.Url, request.ResourceType, out var stream))
                     {
-                        streamTcs.TrySetResult(stream);
+                        request.Headers.TryGetValue("referer", out var referer);
+                        request.Headers.TryGetValue("origin", out var origin);
+                        request.Headers.TryGetValue("user-agent", out var userAgent);
+                        streamTcs.TrySetResult(stream with
+                        {
+                            RefererUrl = referer,
+                            Origin = origin,
+                            UserAgent = userAgent
+                        });
                         await route.AbortAsync();
                         return;
                     }
@@ -105,7 +114,12 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
 
                     var body = await response.TextAsync();
                     if (adapter.TryParseApiResponse(response.Url, contentType, body, out var stream))
-                        streamTcs.TrySetResult(stream);
+                    {
+                        streamTcs.TrySetResult(stream with
+                        {
+                            RefererUrl = page.Url
+                        });
+                    }
                 }
                 catch
                 {
@@ -141,11 +155,21 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
             if (completed == streamTcs.Task)
             {
                 var stream = await streamTcs.Task;
-                return LiveCheckResult.Live(target.Id, stream, page.Url);
+                var authorId = LiveAuthorIdentityHelper.ExtractStableAuthorId(
+                    target.ProfileUrl,
+                    page.Url);
+                return LiveCheckResult.Live(
+                    target.Id,
+                    stream,
+                    page.Url,
+                    authorId);
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            return LiveCheckResult.NotDetected(target.Id, page.Url);
+            return LiveCheckResult.NotDetected(
+                target.Id,
+                page.Url,
+                LiveAuthorIdentityHelper.ExtractStableAuthorId(target.ProfileUrl, page.Url));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
