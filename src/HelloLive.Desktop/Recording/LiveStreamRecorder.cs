@@ -77,9 +77,11 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
         if (string.IsNullOrWhiteSpace(authorId))
             authorId = target.Id;
 
-        var authorName = string.IsNullOrWhiteSpace(target.DisplayName)
-            ? authorId
-            : target.DisplayName.Trim();
+        var authorName = !string.IsNullOrWhiteSpace(stream.AuthorName)
+            ? stream.AuthorName.Trim()
+            : string.IsNullOrWhiteSpace(target.DisplayName)
+                ? authorId
+                : target.DisplayName.Trim();
 
         var platformRoot = Path.Combine(
             DownloadRoot,
