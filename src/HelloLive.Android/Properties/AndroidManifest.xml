@@ -4,5 +4,7 @@
   <application
       android:usesCleartextTraffic="true"
       android:theme="@style/AppTheme"
-      android:label="HelloLive Remote" />
+      android:label="HelloLive Remote"
+      android:icon="@mipmap/app_icon"
+      android:roundIcon="@mipmap/app_icon" />
 </manifest>
