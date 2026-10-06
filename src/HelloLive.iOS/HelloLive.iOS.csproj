@@ -19,6 +19,10 @@
   </Target>
 
   <ItemGroup>
+    <ImageAsset Include="Assets.xcassets\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\HelloLive.Core\HelloLive.Core.csproj" />
     <PackageReference Include="Avalonia.iOS" Version="12.1.0" />
   </ItemGroup>
