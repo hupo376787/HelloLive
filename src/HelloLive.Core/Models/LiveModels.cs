@@ -1,4 +1,6 @@
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
+using System.Globalization;
 using System.Text.Json.Serialization;
 
 namespace HelloLive.Core.Models;
@@ -20,6 +22,8 @@ public sealed class LiveMonitorTarget : ObservableObject
     private bool _useCustomDisplayName;
     private string _authorId = string.Empty;
     private string _profileUrl = string.Empty;
+    private string? _avatarUrl;
+    private IImage? _avatarImage;
     private bool _isEnabled = true;
     private LiveMonitorState _state = LiveMonitorState.Idle;
     private string _statusMessage = "等待检查";
@@ -50,7 +54,11 @@ public sealed class LiveMonitorTarget : ObservableObject
     public string DisplayName
     {
         get => _displayName;
-        set => SetProperty(ref _displayName, value ?? string.Empty);
+        set
+        {
+            if (SetProperty(ref _displayName, value ?? string.Empty))
+                OnPropertyChanged(nameof(AvatarInitial));
+        }
     }
 
     public bool UseCustomDisplayName
@@ -78,6 +86,41 @@ public sealed class LiveMonitorTarget : ObservableObject
     {
         get => _profileUrl;
         set => SetProperty(ref _profileUrl, value ?? string.Empty);
+    }
+
+    public string? AvatarUrl
+    {
+        get => _avatarUrl;
+        set => SetProperty(ref _avatarUrl, value);
+    }
+
+    [JsonIgnore]
+    public IImage? AvatarImage
+    {
+        get => _avatarImage;
+        set
+        {
+            if (SetProperty(ref _avatarImage, value))
+                OnPropertyChanged(nameof(HasAvatarImage));
+        }
+    }
+
+    [JsonIgnore]
+    public bool HasAvatarImage => AvatarImage is not null;
+
+    [JsonIgnore]
+    public string AvatarInitial
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(DisplayName))
+                return "L";
+
+            var enumerator = StringInfo.GetTextElementEnumerator(DisplayName.Trim());
+            return enumerator.MoveNext()
+                ? enumerator.GetTextElement()
+                : "L";
+        }
     }
 
     public bool IsEnabled
@@ -233,6 +276,9 @@ public sealed class LiveMonitorTarget : ObservableObject
         {
             DisplayName = result.AuthorName;
         }
+
+        if (!string.IsNullOrWhiteSpace(result.AvatarUrl))
+            AvatarUrl = result.AvatarUrl;
     }
 
     public void ApplyRecordingState(LiveRecordingState state)
@@ -269,7 +315,8 @@ public sealed record LiveCheckResult(
     LiveStreamInfo? Stream = null,
     string? ResolvedPageUrl = null,
     string? AuthorId = null,
-    string? AuthorName = null)
+    string? AuthorName = null,
+    string? AvatarUrl = null)
 {
     public static LiveCheckResult Checking(string id)
         => new(id, LiveMonitorState.Checking, "正在检查直播状态…", DateTimeOffset.Now);
@@ -279,7 +326,8 @@ public sealed record LiveCheckResult(
         LiveStreamInfo stream,
         string? resolvedPageUrl,
         string? authorId = null,
-        string? authorName = null)
+        string? authorName = null,
+        string? avatarUrl = null)
         => new(
             id,
             LiveMonitorState.Live,
@@ -288,7 +336,8 @@ public sealed record LiveCheckResult(
             stream,
             resolvedPageUrl,
             authorId,
-            authorName);
+            authorName,
+            avatarUrl);
 
     public static LiveCheckResult NotDetected(string id, string? resolvedPageUrl, string? authorId = null)
         => new(
