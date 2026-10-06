@@ -231,7 +231,9 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
                 target.Id,
                 page.Url,
                 authorIdFromApi
-                ?? LiveAuthorIdentityHelper.ExtractStableAuthorId(target.ProfileUrl, page.Url));
+                ?? LiveAuthorIdentityHelper.ExtractStableAuthorId(target.ProfileUrl, page.Url),
+                authorNameFromApi,
+                avatarUrlFromApi);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
