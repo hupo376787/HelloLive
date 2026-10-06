@@ -50,6 +50,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private int _remoteApiPort;
     private string _remoteApiToken = string.Empty;
     private string _remoteApiStatusText = "远程控制服务器未启动";
+    private int _shutdownPrepared;
 
     public MainWindowViewModel(
         ILiveBrowserService browser,
@@ -837,8 +838,22 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
                    StringComparison.Ordinal);
     }
 
+    public async Task PrepareForShutdownAsync()
+    {
+        if (Interlocked.Exchange(ref _shutdownPrepared, 1) != 0)
+            return;
+
+        AddLog("正在安全停止直播录像并刷新文件…");
+        await _coordinator.StopAsync();
+        await _settingsService.SaveAsync(_settings);
+        await SaveMonitorsAsync();
+        AddLog("直播录像已安全停止。");
+    }
+
     public async ValueTask DisposeAsync()
     {
+        await PrepareForShutdownAsync();
+
         _coordinator.CheckResultChanged -= Coordinator_CheckResultChanged;
         _coordinator.RecordingStateChanged -= Coordinator_RecordingStateChanged;
         _coordinator.Log -= Coordinator_Log;
