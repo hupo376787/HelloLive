@@ -173,7 +173,7 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
         {
             try
             {
-                await session.Task.WaitAsync(cancellationToken);
+                await session.WorkerTask.WaitAsync(cancellationToken);
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
