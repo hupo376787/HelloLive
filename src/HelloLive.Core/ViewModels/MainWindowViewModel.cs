@@ -9,6 +9,7 @@ using HelloLive.Core.Services.Browser;
 using HelloLive.Core.Services.Monitoring;
 using HelloLive.Core.Services.Settings;
 using HelloLive.Core.Sites;
+using HelloLive.Core.Utilities;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 
@@ -86,6 +87,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             AttachTarget(target);
 
         _coordinator.CheckResultChanged += Coordinator_CheckResultChanged;
+        _coordinator.RecordingStateChanged += Coordinator_RecordingStateChanged;
         _coordinator.Log += Coordinator_Log;
         _coordinator.RunningChanged += Coordinator_RunningChanged;
 
@@ -323,6 +325,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     public int FailedCount => Monitors.Count(x => x.State == LiveMonitorState.Error);
     public string MonitoringStatusText => IsMonitoring ? "监控运行中" : "监控已停止";
     public string MonitorPanelButtonText => IsMonitorPanelVisible ? "隐藏监控列表" : "显示监控列表";
+    public string DownloadRoot => _coordinator.DownloadRoot;
 
     public async Task InitializeAsync()
     {
@@ -367,6 +370,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             DisplayName = string.IsNullOrWhiteSpace(NewMonitorName)
                 ? BuildDefaultName(normalizedUrl, adapter.DisplayName)
                 : NewMonitorName.Trim(),
+            AuthorId = LiveAuthorIdentityHelper.ExtractStableAuthorId(normalizedUrl),
             IsEnabled = true
         };
 
@@ -384,6 +388,8 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         if (target is null)
             return;
 
+        await _coordinator.StopRecordingAsync(target.Id);
+        await _coordinator.StopRecordingAsync(target.Id);
         target.PropertyChanged -= Target_PropertyChanged;
         Monitors.Remove(target);
         await SaveMonitorsAsync();
@@ -476,6 +482,15 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         });
     }
 
+    private void Coordinator_RecordingStateChanged(LiveRecordingState state)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            var target = Monitors.FirstOrDefault(x => x.Id == state.TargetId);
+            target?.ApplyRecordingState(state);
+        });
+    }
+
     private void Coordinator_Log(string message)
         => Dispatcher.UIThread.Post(() => AddLog(message));
 
@@ -490,13 +505,20 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
     private void Target_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (sender is not LiveMonitorTarget)
+        if (sender is not LiveMonitorTarget target)
             return;
 
         if (e.PropertyName is nameof(LiveMonitorTarget.IsEnabled)
             or nameof(LiveMonitorTarget.DisplayName)
+            or nameof(LiveMonitorTarget.AuthorId)
             or nameof(LiveMonitorTarget.ProfileUrl))
         {
+            if (e.PropertyName == nameof(LiveMonitorTarget.IsEnabled)
+                && !target.IsEnabled)
+            {
+                _ = _coordinator.StopRecordingAsync(target.Id);
+            }
+
             RefreshCoordinatorState();
             RaiseMetricsChanged();
             _ = SaveMonitorsAsync();
@@ -557,13 +579,17 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
                 PlatformId = item.PlatformId,
                 PlatformText = item.PlatformText,
                 DisplayName = item.DisplayName,
+                AuthorId = item.AuthorId,
                 ProfileUrl = item.ProfileUrl,
                 IsEnabled = item.IsEnabled,
                 StateText = item.StateText,
                 StatusMessage = item.StatusMessage,
                 LastCheckedText = item.LastCheckedText,
                 StreamFormat = item.StreamFormat,
-                StreamUrl = item.StreamUrl
+                StreamUrl = item.StreamUrl,
+                IsRecording = item.IsRecording,
+                RecordingFilePath = item.RecordingFilePath,
+                RecordingStatus = item.RecordingStatus
             }).ToList(),
             Logs = Logs.TakeLast(120).ToList()
         };
@@ -595,6 +621,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             DisplayName = string.IsNullOrWhiteSpace(name)
                 ? BuildDefaultName(normalizedUrl, adapter.DisplayName)
                 : name.Trim(),
+            AuthorId = LiveAuthorIdentityHelper.ExtractStableAuthorId(normalizedUrl),
             IsEnabled = true
         };
 
@@ -628,6 +655,8 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             return "未找到对应的监控对象。";
 
         target.IsEnabled = enabled;
+        if (!enabled)
+            await _coordinator.StopRecordingAsync(target.Id);
         await SaveMonitorsAsync();
         RefreshCoordinatorState();
         RaiseMetricsChanged();
@@ -701,6 +730,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         _coordinator.CheckResultChanged -= Coordinator_CheckResultChanged;
+        _coordinator.RecordingStateChanged -= Coordinator_RecordingStateChanged;
         _coordinator.Log -= Coordinator_Log;
         _coordinator.RunningChanged -= Coordinator_RunningChanged;
 
