@@ -5,7 +5,7 @@
     xmlns:vm="using:HelloLive.Core.ViewModels"
     x:DataType="vm:MainWindowViewModel"
     Title="HelloLive"
-    Icon="avares://HelloLive.Core/Assets/app-icon.ico"
+    Icon="avares://HelloLive.Core/Assets/app-icon.png"
     Width="1500"
     Height="920"
     MinWidth="1080"
