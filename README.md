@@ -109,3 +109,21 @@ HelloLive.Browser
 - 添加、启用/停用、移除监控对象。
 
 Android / iOS / Browser 项目不引用 Microsoft.Playwright，也不会在客户端启动 Chromium；所有监控任务始终在桌面 HelloLive 主机执行。
+
+
+## 实时直播录像
+
+桌面端在“开始监控”后会使用程序目录下的 `Download` 作为录像根目录，并沿用 HelloCrab 的目录命名规则：
+
+```text
+Download/
+└─ kuaishou/
+   └─ 作者昵称(作者ID)/
+      └─ 2026-10-06 08-18-30.flv
+```
+
+- 平台目录使用 HelloCrab 同样的规范名称（例如 `kuaishou`、后续 `douyin`）。
+- 作者目录格式为 `昵称(作者ID)`；昵称变化时优先复用以相同完整作者 ID 结尾的已有目录。
+- HTTP-FLV 直播不经过转码，直接顺序写入 `.flv`，每约 2 秒主动 flush，并使用 WriteThrough 降低异常退出时的数据损失。FLV 不依赖文件结束时写入 MP4 的 moov 索引，因此软件异常退出时，已经完整落盘的前部内容仍可播放。
+- HLS 流在存在 FFmpeg 时保存为 fragmented MP4（`frag_keyframe + empty_moov + default_base_moof`），避免普通 MP4 在异常退出时因缺失最终 moov 而整体无法打开。
+- 正常点击“停止监控”或退出程序时，会停止当前录像并正常关闭输出。
