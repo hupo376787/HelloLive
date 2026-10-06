@@ -62,7 +62,11 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         _monitorStore = monitorStore;
         _settings = settingsService.Load();
 
-        _headlessMode = _settings.HeadlessMode;
+        // Saved monitor targets are always probed headlessly. Older debug builds
+        // allowed this setting to be false, which caused Chromium windows to pop up
+        // on every polling cycle. Migrate that state to the new fixed behavior.
+        _headlessMode = true;
+        _settings.HeadlessMode = true;
         _maxConcurrentPages = _settings.MaxConcurrentPages;
         _checkIntervalSeconds = _settings.CheckIntervalSeconds;
         _checkTimeoutSeconds = _settings.CheckTimeoutSeconds;
@@ -334,7 +338,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             ? $"未发现 Chromium，可点击安装。安装目录：{_browser.PreferredChromiumInstallDirectory}"
             : $"Chromium：{path}";
 
-        AddLog($"已加载 {Monitors.Count} 个监控对象。当前最大并发页面数：{MaxConcurrentPages}。 ");
+        AddLog($"已加载 {Monitors.Count} 个监控对象。监控探测固定使用无头 Chromium，当前最大并发页面数：{MaxConcurrentPages}。");
 
         if (AutoStartMonitoring && Monitors.Any(x => x.IsEnabled))
             await StartMonitoringAsync();
