@@ -293,7 +293,15 @@
                           Content="立即检查全部"
                           Command="{Binding CheckAllCommand}" />
                   <TextBlock Classes="caption"
-                             Text="每个检查只临时创建 Page；抓到 FLV/HLS 后立即中止媒体下载并关闭 Page。"
+                             Text="每个检查只临时创建 Page；抓到 FLV/HLS 后立即中止浏览器媒体下载并关闭 Page，录制器会用独立连接实时落盘。"
+                             TextWrapping="Wrap" />
+                  <Border Height="1" Margin="0,3" Background="{DynamicResource BorderColor}" />
+                  <TextBlock Text="直播录像目录" FontWeight="Medium" />
+                  <TextBlock Classes="caption"
+                             Text="{Binding DownloadRoot}"
+                             TextWrapping="Wrap" />
+                  <TextBlock Classes="caption"
+                             Text="目录结构与 HelloCrab 一致：Download / 平台 / 昵称(作者ID) / yyyy-MM-dd HH-mm-ss.flv"
                              TextWrapping="Wrap" />
                 </StackPanel>
               </Border>
@@ -479,6 +487,15 @@
                           <TextBlock Classes="caption"
                                      Text="{Binding StreamFormat, StringFormat='流格式：{0}'}"
                                      IsVisible="{Binding HasStreamUrl}" />
+                          <TextBlock Text="{Binding RecordingStatus}"
+                                     FontWeight="SemiBold"
+                                     Foreground="#10B981"
+                                     IsVisible="{Binding IsRecording}"
+                                     TextWrapping="Wrap" />
+                          <TextBlock Classes="caption"
+                                     Text="{Binding RecordingFileName, StringFormat='录像文件：{0}'}"
+                                     IsVisible="{Binding IsRecording}"
+                                     TextWrapping="Wrap" />
                         </StackPanel>
                       </Grid>
 
