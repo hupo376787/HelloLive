@@ -163,6 +163,9 @@
                                      FontWeight="SemiBold"
                                      TextTrimming="CharacterEllipsis" />
                           <TextBlock Classes="caption"
+                                     Text="{Binding AuthorId, StringFormat='作者ID：{0}'}"
+                                     TextTrimming="CharacterEllipsis" />
+                          <TextBlock Classes="caption"
                                      Text="{Binding ProfileUrl}"
                                      TextTrimming="CharacterEllipsis" />
                         </StackPanel>
