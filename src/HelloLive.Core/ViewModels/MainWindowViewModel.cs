@@ -781,6 +781,34 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         }
     }
 
+    public string GetMonitorFolderPath(LiveMonitorTarget target)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+
+        // If this monitor has already recorded, the recorder's actual path is authoritative.
+        if (!string.IsNullOrWhiteSpace(target.RecordingFilePath))
+        {
+            var existingDirectory = Path.GetDirectoryName(target.RecordingFilePath);
+            if (!string.IsNullOrWhiteSpace(existingDirectory))
+                return existingDirectory;
+        }
+
+        var platformRoot = Path.Combine(
+            DownloadRoot,
+            PlatformFolderHelper.GetFolderName(target.PlatformId));
+
+        // A real author id is required for HelloCrab-compatible author folders.
+        // Before it is resolved, open the platform folder rather than creating a wrong
+        // folder from Kuaishou's page/principal id.
+        if (string.IsNullOrWhiteSpace(target.AuthorId))
+            return platformRoot;
+
+        return AuthorFolderResolver.Resolve(
+            platformRoot,
+            target.DisplayName,
+            target.AuthorId);
+    }
+
     private static string BuildDefaultName(string url, string platformDisplayName)
     {
         if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
