@@ -221,18 +221,12 @@
               <Border Classes="card">
                 <StackPanel Spacing="10">
                   <TextBlock Text="浏览器" FontSize="18" FontWeight="SemiBold" />
-                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                    <StackPanel Spacing="2">
-                      <TextBlock Text="无头模式" FontWeight="Medium" />
-                      <TextBlock Classes="caption"
-                                 Text="后台运行 Chromium，不显示浏览器窗口。首次调试可临时关闭。"
-                                 TextWrapping="Wrap" />
-                    </StackPanel>
-                    <ToggleSwitch Grid.Column="1"
-                                  IsChecked="{Binding HeadlessMode, Mode=TwoWay}"
-                                  OnContent="开"
-                                  OffContent="关" />
-                  </Grid>
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="监控探测：无头模式" FontWeight="Medium" />
+                    <TextBlock Classes="caption"
+                               Text="监控列表中的作者始终使用后台 Chromium 探测，不显示浏览器窗口；轮询和“立即检查”都不会弹出 Chrome。"
+                               TextWrapping="Wrap" />
+                  </StackPanel>
                   <CheckBox Content="阻止图片和字体，降低页面资源占用"
                             IsChecked="{Binding BlockImagesAndFonts, Mode=TwoWay}" />
                   <Button Content="安装 / 更新 Chromium"
