@@ -186,6 +186,15 @@
                           <TextBlock Classes="caption" Text="{Binding LastCheckedText}" />
                           <TextBlock Classes="caption"
                                      Text="{Binding StreamFormat, StringFormat='流格式：{0}'}" />
+                          <TextBlock Text="{Binding RecordingStatus}"
+                                     FontWeight="SemiBold"
+                                     Foreground="#10B981"
+                                     IsVisible="{Binding IsRecording}"
+                                     TextWrapping="Wrap" />
+                          <TextBlock Classes="caption"
+                                     Text="{Binding RecordingFilePath, StringFormat='录像：{0}'}"
+                                     IsVisible="{Binding IsRecording}"
+                                     TextWrapping="Wrap" />
                         </StackPanel>
                       </Grid>
 
