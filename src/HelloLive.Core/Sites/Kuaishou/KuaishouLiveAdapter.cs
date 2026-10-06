@@ -357,6 +357,133 @@ public sealed class KuaishouLiveAdapter : ILivePlatformAdapter
                || path.Contains("/live_api/baseuser/", StringComparison.OrdinalIgnoreCase);
     }
 
+    public bool TryParseAuthorAvatar(
+        string responseUrl,
+        string contentType,
+        string responseBody,
+        out string avatarUrl)
+    {
+        avatarUrl = string.Empty;
+        if (string.IsNullOrWhiteSpace(responseBody) || responseBody.Length > 2_000_000)
+            return false;
+
+        if (!IsAuthorMetadataResponse(responseUrl))
+            return false;
+
+        var trimmed = responseBody.AsSpan().TrimStart();
+        if (trimmed.IsEmpty || (trimmed[0] != '{' && trimmed[0] != '['))
+            return false;
+
+        try
+        {
+            using var document = JsonDocument.Parse(responseBody);
+            return TryFindAuthorAvatar(document.RootElement, out avatarUrl);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static bool TryFindAuthorAvatar(JsonElement element, out string avatarUrl)
+    {
+        avatarUrl = string.Empty;
+
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in element.EnumerateObject())
+            {
+                if (property.Value.ValueKind == JsonValueKind.Object
+                    && IsAuthorContainerName(property.Name)
+                    && TryReadAuthorAvatar(property.Value, out avatarUrl))
+                {
+                    return true;
+                }
+            }
+
+            foreach (var property in element.EnumerateObject())
+            {
+                if (TryFindAuthorAvatar(property.Value, out avatarUrl))
+                    return true;
+            }
+        }
+        else if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray())
+            {
+                if (TryFindAuthorAvatar(item, out avatarUrl))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryReadAuthorAvatar(JsonElement author, out string avatarUrl)
+    {
+        foreach (var propertyName in new[]
+                 {
+                     "headerUrl", "headerUrls", "avatar", "avatarUrl", "avatarUrls",
+                     "profile", "head", "headUrl", "bigHead"
+                 })
+        {
+            if (!TryGetPropertyIgnoreCase(author, propertyName, out var value))
+                continue;
+
+            if (TryReadFirstHttpUrl(value, out avatarUrl))
+                return true;
+        }
+
+        avatarUrl = string.Empty;
+        return false;
+    }
+
+    private static bool TryReadFirstHttpUrl(JsonElement element, out string url)
+    {
+        url = string.Empty;
+
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.String:
+                var text = element.GetString()?.Trim();
+                if (Uri.TryCreate(text, UriKind.Absolute, out var uri)
+                    && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+                {
+                    url = text!;
+                    return true;
+                }
+                return false;
+
+            case JsonValueKind.Array:
+                foreach (var item in element.EnumerateArray())
+                {
+                    if (TryReadFirstHttpUrl(item, out url))
+                        return true;
+                }
+                return false;
+
+            case JsonValueKind.Object:
+                foreach (var preferred in new[] { "url", "urls", "cdn", "src", "value" })
+                {
+                    if (TryGetPropertyIgnoreCase(element, preferred, out var child)
+                        && TryReadFirstHttpUrl(child, out url))
+                    {
+                        return true;
+                    }
+                }
+
+                foreach (var property in element.EnumerateObject())
+                {
+                    if (TryReadFirstHttpUrl(property.Value, out url))
+                        return true;
+                }
+                return false;
+
+            default:
+                return false;
+        }
+    }
+
     private static IEnumerable<string> EnumerateStrings(JsonElement element)
     {
         switch (element.ValueKind)
