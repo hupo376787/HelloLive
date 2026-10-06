@@ -46,7 +46,19 @@ public partial class MainWindow : Window
 
     private void TitleBar_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            return;
+
+        if (e.ClickCount == 2)
+        {
+            WindowState = WindowState == WindowState.Maximized
+                ? WindowState.Normal
+                : WindowState.Maximized;
+            e.Handled = true;
+            return;
+        }
+
+        if (e.ClickCount == 1)
             BeginMoveDrag(e);
     }
 
@@ -64,7 +76,7 @@ public partial class MainWindow : Window
 
     private async void CheckTargetButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if (sender is Button { Tag: LiveMonitorTarget target }
+        if (TryGetMonitorTarget(sender, out var target)
             && DataContext is MainWindowViewModel viewModel)
         {
             await viewModel.CheckTargetCommand.ExecuteAsync(target);
@@ -73,7 +85,7 @@ public partial class MainWindow : Window
 
     private async void RemoveMonitorButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if (sender is Button { Tag: LiveMonitorTarget target }
+        if (TryGetMonitorTarget(sender, out var target)
             && DataContext is MainWindowViewModel viewModel)
         {
             await viewModel.RemoveMonitorCommand.ExecuteAsync(target);
@@ -82,7 +94,7 @@ public partial class MainWindow : Window
 
     private async void CopyStreamButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if (sender is not Button { Tag: LiveMonitorTarget target }
+        if (!TryGetMonitorTarget(sender, out var target)
             || string.IsNullOrWhiteSpace(target.StreamUrl))
         {
             return;
@@ -187,9 +199,24 @@ public partial class MainWindow : Window
     }
 
 
+    private static bool TryGetMonitorTarget(
+        object? sender,
+        out LiveMonitorTarget target)
+    {
+        target = sender switch
+        {
+            Button { Tag: LiveMonitorTarget item } => item,
+            MenuItem { Tag: LiveMonitorTarget item } => item,
+            _ => null!
+        };
+
+        return target is not null;
+    }
+
+
     private void OpenProfileButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if (sender is not Button { Tag: LiveMonitorTarget target }
+        if (!TryGetMonitorTarget(sender, out var target)
             || string.IsNullOrWhiteSpace(target.ProfileUrl))
         {
             return;
