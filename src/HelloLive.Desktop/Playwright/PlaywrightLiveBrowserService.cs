@@ -52,6 +52,7 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
         var normalizedUrl = adapter.NormalizeProfileUrl(target.ProfileUrl);
         var stopwatch = Stopwatch.StartNew();
         string? resolvedPageUrl = null;
+        string? authorIdFromApi = null;
 
         try
         {
@@ -113,6 +114,17 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
                     }
 
                     var body = await response.TextAsync();
+                    if (authorIdFromApi is null
+                        && adapter.TryParseAuthorId(
+                            response.Url,
+                            contentType,
+                            body,
+                            out var parsedAuthorId)
+                        && !string.IsNullOrWhiteSpace(parsedAuthorId))
+                    {
+                        authorIdFromApi = parsedAuthorId;
+                    }
+
                     if (adapter.TryParseApiResponse(response.Url, contentType, body, out var stream))
                     {
                         streamTcs.TrySetResult(stream with
@@ -155,9 +167,10 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
             if (completed == streamTcs.Task)
             {
                 var stream = await streamTcs.Task;
-                var authorId = LiveAuthorIdentityHelper.ExtractStableAuthorId(
-                    target.ProfileUrl,
-                    page.Url);
+                var authorId = authorIdFromApi
+                               ?? LiveAuthorIdentityHelper.ExtractStableAuthorId(
+                                   target.ProfileUrl,
+                                   page.Url);
                 return LiveCheckResult.Live(
                     target.Id,
                     stream,
@@ -169,7 +182,8 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
             return LiveCheckResult.NotDetected(
                 target.Id,
                 page.Url,
-                LiveAuthorIdentityHelper.ExtractStableAuthorId(target.ProfileUrl, page.Url));
+                authorIdFromApi
+                ?? LiveAuthorIdentityHelper.ExtractStableAuthorId(target.ProfileUrl, page.Url));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
