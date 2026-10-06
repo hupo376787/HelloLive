@@ -389,7 +389,6 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             return;
 
         await _coordinator.StopRecordingAsync(target.Id);
-        await _coordinator.StopRecordingAsync(target.Id);
         target.PropertyChanged -= Target_PropertyChanged;
         Monitors.Remove(target);
         await SaveMonitorsAsync();
@@ -639,6 +638,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         if (target is null)
             return "未找到对应的监控对象。";
 
+        await _coordinator.StopRecordingAsync(target.Id);
         target.PropertyChanged -= Target_PropertyChanged;
         Monitors.Remove(target);
         await SaveMonitorsAsync();
