@@ -83,8 +83,12 @@ public sealed class KuaishouLiveAdapter : ILivePlatformAdapter
         if (string.IsNullOrWhiteSpace(responseBody) || responseBody.Length > 2_000_000)
             return false;
 
-        if (!IsAuthorMetadataResponse(responseUrl))
+        if (!responseUrl.Contains("kuaishou", StringComparison.OrdinalIgnoreCase)
+            && !responseUrl.Contains("gifshow", StringComparison.OrdinalIgnoreCase)
+            && !responseUrl.Contains("chenzhongtech", StringComparison.OrdinalIgnoreCase))
+        {
             return false;
+        }
 
         var trimmed = responseBody.AsSpan().TrimStart();
         if (trimmed.IsEmpty || (trimmed[0] != '{' && trimmed[0] != '['))
@@ -129,12 +133,8 @@ public sealed class KuaishouLiveAdapter : ILivePlatformAdapter
         if (string.IsNullOrWhiteSpace(responseBody) || responseBody.Length > 2_000_000)
             return false;
 
-        if (!responseUrl.Contains("kuaishou", StringComparison.OrdinalIgnoreCase)
-            && !responseUrl.Contains("gifshow", StringComparison.OrdinalIgnoreCase)
-            && !responseUrl.Contains("chenzhongtech", StringComparison.OrdinalIgnoreCase))
-        {
+        if (!IsAuthorMetadataResponse(responseUrl))
             return false;
-        }
 
         var trimmed = responseBody.AsSpan().TrimStart();
         if (trimmed.IsEmpty || (trimmed[0] != '{' && trimmed[0] != '['))
