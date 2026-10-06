@@ -5,6 +5,7 @@
     xmlns:vm="using:HelloLive.Core.ViewModels"
     x:DataType="vm:MainWindowViewModel"
     Title="HelloLive"
+    Icon="avares://HelloLive.Core/Assets/app-icon.ico"
     Width="1500"
     Height="920"
     MinWidth="1080"
@@ -130,13 +131,15 @@
               ColumnSpacing="12"
               VerticalAlignment="Center"
               PointerPressed="TitleBar_PointerPressed">
-          <Border Width="50" Height="50" CornerRadius="10" Background="#28FFFFFF">
-            <TextBlock Text="HL"
-                       Foreground="White"
-                       FontSize="20"
-                       FontWeight="Bold"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center" />
+          <Border Width="50"
+                  Height="50"
+                  CornerRadius="10"
+                  Background="#28FFFFFF"
+                  Padding="5"
+                  ClipToBounds="True">
+            <Image Source="avares://HelloLive.Core/Assets/app-icon.png"
+                   Stretch="Uniform"
+                   IsHitTestVisible="False" />
           </Border>
           <StackPanel Grid.Column="1" VerticalAlignment="Center">
             <TextBlock Text="HelloLive" FontSize="23" FontWeight="Bold" Foreground="White" />
@@ -444,7 +447,7 @@
             <StackPanel>
               <TextBlock Text="监控列表" FontSize="19" FontWeight="SemiBold" />
               <TextBlock Classes="caption"
-                         Text="作者头像、身份、直播状态与录像状态集中显示；双击作者卡片可打开对应录像文件夹。"
+                         Text="作者头像、身份、直播状态与录像状态集中显示；双击打开录像文件夹，右键打开操作菜单。"
                          Margin="0,3,0,0"
                          TextWrapping="Wrap" />
             </StackPanel>
@@ -472,6 +475,24 @@
                           Padding="12"
                           Cursor="Hand"
                           PointerPressed="MonitorItem_PointerPressed">
+                    <Border.ContextMenu>
+                      <ContextMenu>
+                        <MenuItem Header="立即检查"
+                                  Tag="{Binding}"
+                                  Click="CheckTargetButton_Click" />
+                        <MenuItem Header="复制直播流"
+                                  Tag="{Binding}"
+                                  IsEnabled="{Binding HasStreamUrl}"
+                                  Click="CopyStreamButton_Click" />
+                        <MenuItem Header="打开主页"
+                                  Tag="{Binding}"
+                                  Click="OpenProfileButton_Click" />
+                        <Separator />
+                        <MenuItem Header="移除监控"
+                                  Tag="{Binding}"
+                                  Click="RemoveMonitorButton_Click" />
+                      </ContextMenu>
+                    </Border.ContextMenu>
                     <StackPanel Spacing="10">
                       <Grid ColumnDefinitions="58,*,Auto" ColumnSpacing="10">
                         <Border Width="54"
@@ -586,28 +607,6 @@
                         </Grid>
                       </Border>
 
-                      <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="6">
-                        <Button Classes="monitorAction check"
-                                Content="检查"
-                                Tag="{Binding}"
-                                Click="CheckTargetButton_Click" />
-                        <Button Grid.Column="1"
-                                Classes="monitorAction"
-                                Content="复制流"
-                                IsEnabled="{Binding HasStreamUrl}"
-                                Tag="{Binding}"
-                                Click="CopyStreamButton_Click" />
-                        <Button Grid.Column="2"
-                                Classes="monitorAction"
-                                Content="主页"
-                                Tag="{Binding}"
-                                Click="OpenProfileButton_Click" />
-                        <Button Grid.Column="3"
-                                Classes="monitorAction danger"
-                                Content="移除"
-                                Tag="{Binding}"
-                                Click="RemoveMonitorButton_Click" />
-                      </Grid>
                     </StackPanel>
                   </Border>
                 </DataTemplate>
