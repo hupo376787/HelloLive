@@ -17,6 +17,7 @@ public sealed class LiveMonitorTarget : ObservableObject
     private string _id = Guid.NewGuid().ToString("N");
     private string _platformId = "kuaishou";
     private string _displayName = string.Empty;
+    private bool _useCustomDisplayName;
     private string _authorId = string.Empty;
     private string _profileUrl = string.Empty;
     private bool _isEnabled = true;
@@ -52,11 +53,26 @@ public sealed class LiveMonitorTarget : ObservableObject
         set => SetProperty(ref _displayName, value ?? string.Empty);
     }
 
+    public bool UseCustomDisplayName
+    {
+        get => _useCustomDisplayName;
+        set => SetProperty(ref _useCustomDisplayName, value);
+    }
+
     public string AuthorId
     {
         get => _authorId;
-        set => SetProperty(ref _authorId, value ?? string.Empty);
+        set
+        {
+            if (SetProperty(ref _authorId, value ?? string.Empty))
+                OnPropertyChanged(nameof(AuthorIdText));
+        }
     }
+
+    [JsonIgnore]
+    public string AuthorIdText => string.IsNullOrWhiteSpace(AuthorId)
+        ? "作者ID：待解析"
+        : $"作者ID：{AuthorId}";
 
     public string ProfileUrl
     {
@@ -211,6 +227,12 @@ public sealed class LiveMonitorTarget : ObservableObject
         ResolvedPageUrl = result.ResolvedPageUrl;
         if (!string.IsNullOrWhiteSpace(result.AuthorId))
             AuthorId = result.AuthorId;
+
+        if (!UseCustomDisplayName
+            && !string.IsNullOrWhiteSpace(result.AuthorName))
+        {
+            DisplayName = result.AuthorName;
+        }
     }
 
     public void ApplyRecordingState(LiveRecordingState state)
@@ -246,7 +268,8 @@ public sealed record LiveCheckResult(
     DateTimeOffset CheckedAt,
     LiveStreamInfo? Stream = null,
     string? ResolvedPageUrl = null,
-    string? AuthorId = null)
+    string? AuthorId = null,
+    string? AuthorName = null)
 {
     public static LiveCheckResult Checking(string id)
         => new(id, LiveMonitorState.Checking, "正在检查直播状态…", DateTimeOffset.Now);
@@ -255,7 +278,8 @@ public sealed record LiveCheckResult(
         string id,
         LiveStreamInfo stream,
         string? resolvedPageUrl,
-        string? authorId = null)
+        string? authorId = null,
+        string? authorName = null)
         => new(
             id,
             LiveMonitorState.Live,
@@ -263,7 +287,8 @@ public sealed record LiveCheckResult(
             DateTimeOffset.Now,
             stream,
             resolvedPageUrl,
-            authorId);
+            authorId,
+            authorName);
 
     public static LiveCheckResult NotDetected(string id, string? resolvedPageUrl, string? authorId = null)
         => new(
