@@ -363,13 +363,15 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             return;
         }
 
+        var hasCustomName = !string.IsNullOrWhiteSpace(NewMonitorName);
         var target = new LiveMonitorTarget
         {
             PlatformId = adapter.Id,
             ProfileUrl = normalizedUrl,
-            DisplayName = string.IsNullOrWhiteSpace(NewMonitorName)
-                ? BuildDefaultName(normalizedUrl, adapter.DisplayName)
-                : NewMonitorName.Trim(),
+            DisplayName = hasCustomName
+                ? NewMonitorName.Trim()
+                : BuildDefaultName(normalizedUrl, adapter.DisplayName),
+            UseCustomDisplayName = hasCustomName,
             AuthorId = LiveAuthorIdentityHelper.ExtractStableAuthorId(normalizedUrl),
             IsEnabled = true
         };
@@ -498,10 +500,27 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
     private void AttachTarget(LiveMonitorTarget target)
     {
+        // Older builds stored Kuaishou /u/{principalId} or /profile/{principalId}
+        // as AuthorId. That is not the account author.id used by HelloCrab folders.
+        if (LiveAuthorIdentityHelper.IsKuaishouPageIdentifier(
+                target.ProfileUrl,
+                target.AuthorId))
+        {
+            target.AuthorId = string.Empty;
+        }
+
         if (string.IsNullOrWhiteSpace(target.AuthorId))
         {
             target.AuthorId = LiveAuthorIdentityHelper.ExtractStableAuthorId(
                 target.ProfileUrl);
+        }
+
+        // Migrate old entries: when the name is just the URL tail it was auto-generated,
+        // so a resolved nickname may safely replace it later.
+        if (!target.UseCustomDisplayName
+            && !LooksLikeAutoDisplayName(target.DisplayName, target.ProfileUrl))
+        {
+            target.UseCustomDisplayName = true;
         }
 
         target.PropertyChanged += Target_PropertyChanged;
@@ -619,13 +638,15 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         if (Monitors.Any(x => string.Equals(x.ProfileUrl, normalizedUrl, StringComparison.OrdinalIgnoreCase)))
             return "该地址已经在监控列表中。";
 
+        var hasCustomName = !string.IsNullOrWhiteSpace(name);
         var target = new LiveMonitorTarget
         {
             PlatformId = adapter.Id,
             ProfileUrl = normalizedUrl,
-            DisplayName = string.IsNullOrWhiteSpace(name)
-                ? BuildDefaultName(normalizedUrl, adapter.DisplayName)
-                : name.Trim(),
+            DisplayName = hasCustomName
+                ? name!.Trim()
+                : BuildDefaultName(normalizedUrl, adapter.DisplayName),
+            UseCustomDisplayName = hasCustomName,
             AuthorId = LiveAuthorIdentityHelper.ExtractStableAuthorId(normalizedUrl),
             IsEnabled = true
         };
@@ -731,6 +752,22 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         }
 
         return platformDisplayName + "监控";
+    }
+
+    private static bool LooksLikeAutoDisplayName(string? displayName, string? profileUrl)
+    {
+        if (string.IsNullOrWhiteSpace(displayName)
+            || !Uri.TryCreate(profileUrl, UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        var segment = uri.Segments.LastOrDefault()?.Trim('/');
+        return !string.IsNullOrWhiteSpace(segment)
+               && string.Equals(
+                   displayName.Trim(),
+                   Uri.UnescapeDataString(segment),
+                   StringComparison.Ordinal);
     }
 
     public async ValueTask DisposeAsync()
