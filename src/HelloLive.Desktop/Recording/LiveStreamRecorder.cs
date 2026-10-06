@@ -21,7 +21,7 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
         public required string TargetId { get; init; }
         public required string OutputPath { get; init; }
         public required CancellationTokenSource Cancellation { get; init; }
-        public required Task Task { get; set; }
+        public required Task WorkerTask { get; set; }
     }
 
     private readonly ConcurrentDictionary<string, RecordingSession> _sessions =
@@ -104,7 +104,7 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
             TargetId = target.Id,
             OutputPath = outputPath,
             Cancellation = sessionCancellation,
-            Task = Task.CompletedTask
+            WorkerTask = System.Threading.Tasks.Task.CompletedTask
         };
 
         if (!_sessions.TryAdd(target.Id, session))
@@ -123,7 +123,7 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
         Log?.Invoke(
             $"{authorName}：开始实时录制 → {outputPath}");
 
-        session.Task = Task.Run(
+        session.WorkerTask = Task.Run(
             () => RunSessionAsync(
                 session,
                 target,
@@ -146,7 +146,7 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
 
         try
         {
-            await session.Task.WaitAsync(cancellationToken);
+            await session.WorkerTask.WaitAsync(cancellationToken);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
@@ -401,11 +401,11 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
                 {
                 }
 
-                var graceful = await Task.WhenAny(
+                await Task.WhenAny(
                     process.WaitForExitAsync(),
                     Task.Delay(TimeSpan.FromSeconds(5)));
 
-                if (!process.HasExited && graceful is not null)
+                if (!process.HasExited)
                 {
                     try { process.Kill(entireProcessTree: true); } catch { }
                 }
