@@ -3,9 +3,9 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="using:HelloLive.Core.ViewModels"
+    xmlns:controls="using:HelloLive.Core.Controls"
     x:DataType="vm:MainWindowViewModel"
     Title="HelloLive"
-    Icon="avares://HelloLive.Core/Assets/app-icon.png"
     Width="1500"
     Height="920"
     MinWidth="1080"
@@ -135,11 +135,9 @@
                   Height="50"
                   CornerRadius="10"
                   Background="#28FFFFFF"
-                  Padding="5"
+                  Padding="4"
                   ClipToBounds="True">
-            <Image Source="avares://HelloLive.Core/Assets/app-icon.png"
-                   Stretch="Uniform"
-                   IsHitTestVisible="False" />
+            <controls:LiveLogo />
           </Border>
           <StackPanel Grid.Column="1" VerticalAlignment="Center">
             <TextBlock Text="HelloLive" FontSize="23" FontWeight="Bold" Foreground="White" />
