@@ -190,6 +190,11 @@ public sealed class KuaishouLiveAdapter : ILivePlatformAdapter
            || name.Equals("user", StringComparison.OrdinalIgnoreCase)
            || name.Equals("userinfo", StringComparison.OrdinalIgnoreCase)
            || name.Equals("userInfo", StringComparison.OrdinalIgnoreCase)
+           || name.Equals("sensitiveUserInfo", StringComparison.OrdinalIgnoreCase)
+           || name.Equals("userProfile", StringComparison.OrdinalIgnoreCase)
+           || name.Equals("profileUser", StringComparison.OrdinalIgnoreCase)
+           || name.Equals("profileInfo", StringComparison.OrdinalIgnoreCase)
+           || name.Equals("visionProfile", StringComparison.OrdinalIgnoreCase)
            || name.Equals("owner", StringComparison.OrdinalIgnoreCase)
            || name.Equals("profile", StringComparison.OrdinalIgnoreCase);
 
@@ -350,11 +355,16 @@ public sealed class KuaishouLiveAdapter : ILivePlatformAdapter
         }
 
         var path = uri.AbsolutePath.TrimEnd('/');
+        var isGraphQl = path.Equals("/graphql", StringComparison.OrdinalIgnoreCase)
+                        || path.EndsWith("/m_graphql", StringComparison.OrdinalIgnoreCase)
+                        || path.Contains("/graphql/", StringComparison.OrdinalIgnoreCase);
+
         return path.Equals("/live_api/profile/public", StringComparison.OrdinalIgnoreCase)
                || path.Equals("/rest/v/profile/feed", StringComparison.OrdinalIgnoreCase)
                || path.Equals("/live_api/baseuser/userinfo/sensitive", StringComparison.OrdinalIgnoreCase)
                || path.Contains("/live_api/profile/", StringComparison.OrdinalIgnoreCase)
-               || path.Contains("/live_api/baseuser/", StringComparison.OrdinalIgnoreCase);
+               || path.Contains("/live_api/baseuser/", StringComparison.OrdinalIgnoreCase)
+               || isGraphQl;
     }
 
     public bool TryParseAuthorAvatar(
