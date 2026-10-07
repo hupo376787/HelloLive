@@ -1,0 +1,53 @@
+<UserControl
+    x:Class="HelloLive.Core.Controls.LiveLogo"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    IsHitTestVisible="False">
+  <Viewbox Stretch="Uniform">
+    <Canvas Width="512" Height="512">
+      <!-- Recreated from the supplied HelloLive artwork as vectors so Avalonia
+           does not depend on a bitmap decoder at startup. -->
+      <Ellipse Width="486"
+               Height="486"
+               Canvas.Left="13"
+               Canvas.Top="0"
+               Stroke="#FFFFAD52"
+               StrokeThickness="34" />
+      <Ellipse Width="438"
+               Height="438"
+               Canvas.Left="37"
+               Canvas.Top="24"
+               Stroke="#FFFF7893"
+               StrokeThickness="18" />
+      <Ellipse Width="404"
+               Height="404"
+               Canvas.Left="54"
+               Canvas.Top="41"
+               Stroke="#FFFFD6DC"
+               StrokeThickness="16" />
+
+      <Border Width="270"
+              Height="124"
+              Canvas.Left="121"
+              Canvas.Top="388"
+              Background="#FFFF7893"
+              CornerRadius="25">
+        <Grid>
+          <Border Width="18"
+                  Margin="14,8,0,8"
+                  HorizontalAlignment="Left"
+                  Background="#FFFF6484"
+                  CornerRadius="9" />
+          <TextBlock Text="LIVE"
+                     Foreground="White"
+                     FontSize="72"
+                     FontWeight="SemiBold"
+                     LetterSpacing="2"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center"
+                     Margin="10,-2,0,0" />
+        </Grid>
+      </Border>
+    </Canvas>
+  </Viewbox>
+</UserControl>
