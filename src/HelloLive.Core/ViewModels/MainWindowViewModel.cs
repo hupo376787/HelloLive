@@ -393,6 +393,73 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         AddLog($"已添加监控：{target.DisplayName}（{adapter.DisplayName}）。");
     }
 
+    public async Task<string?> UpdateMonitorUrlAsync(
+        LiveMonitorTarget target,
+        string newUrl)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+
+        var input = (newUrl ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(input))
+            return "请输入作者主页或直播分享地址。";
+
+        var adapter = _platforms.ResolveByProfileUrl(input);
+        if (adapter is null)
+            return "暂不支持这个地址。当前版本已实现快手适配器。";
+
+        var normalizedUrl = adapter.NormalizeProfileUrl(input);
+        if (Monitors.Any(x => !ReferenceEquals(x, target)
+                              && string.Equals(
+                                  x.ProfileUrl,
+                                  normalizedUrl,
+                                  StringComparison.OrdinalIgnoreCase)))
+        {
+            return "该地址已经在监控列表中。";
+        }
+
+        if (string.Equals(
+                target.ProfileUrl,
+                normalizedUrl,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        // URL 指向的作者可能已经改变。先停止旧作者录像，再清理旧作者的
+        // 运行态身份/头像/流信息，避免界面和录像目录继续沿用旧数据。
+        await _coordinator.StopRecordingAsync(target.Id);
+        _loadedAvatarUrls.Remove(target.Id);
+
+        target.PlatformId = adapter.Id;
+        target.ProfileUrl = normalizedUrl;
+        target.AuthorId = LiveAuthorIdentityHelper.ExtractStableAuthorId(normalizedUrl);
+        target.AvatarUrl = null;
+        target.AvatarImage = null;
+        target.State = LiveMonitorState.Idle;
+        target.StatusMessage = "URL 已修改，等待重新检查";
+        target.LastCheckedAt = null;
+        target.StreamUrl = null;
+        target.StreamFormat = null;
+        target.ResolvedPageUrl = null;
+        target.IsRecording = false;
+        target.RecordingFilePath = null;
+        target.RecordingStatus = string.Empty;
+
+        if (!target.UseCustomDisplayName)
+            target.DisplayName = BuildDefaultName(normalizedUrl, adapter.DisplayName);
+
+        await SaveMonitorsAsync();
+        RefreshCoordinatorState();
+        RaiseMetricsChanged();
+        AddLog($"已修改监控 URL：{target.DisplayName} → {normalizedUrl}");
+
+        // 修改 URL 后立即重新探测一次，尽快刷新昵称、作者 ID 和头像。
+        if (target.IsEnabled)
+            await _coordinator.CheckOneAsync(target.Id);
+
+        return null;
+    }
+
     private async Task RemoveMonitorAsync(LiveMonitorTarget? target)
     {
         if (target is null)
