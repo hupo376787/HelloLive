@@ -5,6 +5,7 @@ using HelloLive.Core.Utilities;
 using HelloLive.Desktop.Chromium;
 using Microsoft.Playwright;
 using System.Diagnostics;
+using System.Text.Json;
 
 namespace HelloLive.Desktop.Playwright;
 
@@ -189,6 +190,14 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
 
             resolvedPageUrl = page.Url;
 
+            // Even when the author is offline, Kuaishou usually exposes the profile
+            // nickname in the page title / OG metadata and the avatar URL in the DOM.
+            // Capture that immediately, then refresh it once more before returning.
+            await MergeAuthorMetadataFromDomAsync(
+                page,
+                name => authorNameFromApi ??= name,
+                avatar => avatarUrlFromApi ??= avatar);
+
             var remaining = TimeSpan.FromSeconds(options.CheckTimeoutSeconds) - stopwatch.Elapsed;
             if (remaining < TimeSpan.FromMilliseconds(300))
                 remaining = TimeSpan.FromMilliseconds(300);
@@ -209,6 +218,11 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
                         Task.Delay(TimeSpan.FromMilliseconds(900), cancellationToken));
                 }
 
+                await MergeAuthorMetadataFromDomAsync(
+                    page,
+                    name => authorNameFromApi ??= name,
+                    avatar => avatarUrlFromApi ??= avatar);
+
                 if (!string.IsNullOrWhiteSpace(authorNameFromApi))
                     stream = stream with { AuthorName = authorNameFromApi };
 
@@ -227,6 +241,12 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
             }
 
             cancellationToken.ThrowIfCancellationRequested();
+
+            await MergeAuthorMetadataFromDomAsync(
+                page,
+                name => authorNameFromApi ??= name,
+                avatar => avatarUrlFromApi ??= avatar);
+
             return LiveCheckResult.NotDetected(
                 target.Id,
                 page.Url,
@@ -246,6 +266,103 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
         finally
         {
             try { await page.CloseAsync(); } catch { }
+        }
+    }
+
+    private static async Task MergeAuthorMetadataFromDomAsync(
+        IPage page,
+        Action<string> setName,
+        Action<string> setAvatar)
+    {
+        try
+        {
+            var result = await page.EvaluateAsync<JsonElement>("""
+                () => {
+                    const firstAttr = (selectors, attrs) => {
+                        for (const selector of selectors) {
+                            const element = document.querySelector(selector);
+                            if (!element) continue;
+
+                            for (const attr of attrs) {
+                                const value = element.getAttribute?.(attr);
+                                if (value && /^https?:\/\//i.test(value.trim()))
+                                    return value.trim();
+                            }
+
+                            if (element instanceof HTMLImageElement) {
+                                const value = element.currentSrc || element.src;
+                                if (value && /^https?:\/\//i.test(value.trim()))
+                                    return value.trim();
+                            }
+                        }
+                        return "";
+                    };
+
+                    const normalizeName = value => {
+                        if (!value) return "";
+                        let text = String(value).replace(/\s+/g, " ").trim();
+                        text = text.replace(/\s*[-_|·]\s*(快手直播|快手|Kuaishou).*$/i, "").trim();
+                        if (/^(快手直播|快手|Kuaishou)$/i.test(text)) return "";
+                        return text;
+                    };
+
+                    let name = "";
+                    for (const selector of [
+                        '[class*="profile" i] [class*="name" i]',
+                        '[class*="user" i] [class*="name" i]',
+                        '[class*="nickname" i]',
+                        '[class*="user-name" i]',
+                        '[class*="profile-name" i]',
+                        'meta[property="og:title"]',
+                        'meta[name="twitter:title"]'
+                    ]) {
+                        const element = document.querySelector(selector);
+                        const candidate = element?.getAttribute?.("content") || element?.textContent || "";
+                        name = normalizeName(candidate);
+                        if (name) break;
+                    }
+
+                    if (!name)
+                        name = normalizeName(document.title);
+
+                    const avatar = firstAttr(
+                        [
+                            '[class*="profile" i] [class*="avatar" i] img',
+                            '[class*="user" i] [class*="avatar" i] img',
+                            '[class*="avatar" i] img',
+                            'img[class*="avatar" i]',
+                            '[class*="head" i] img',
+                            'meta[property="og:image"]',
+                            'meta[name="twitter:image"]',
+                            'link[rel="image_src"]'
+                        ],
+                        ['content', 'href', 'src', 'data-src', 'data-original']
+                    );
+
+                    return { name, avatar };
+                }
+                """);
+
+            if (result.ValueKind != JsonValueKind.Object)
+                return;
+
+            if (result.TryGetProperty("name", out var nameElement))
+            {
+                var name = nameElement.GetString()?.Trim();
+                if (!string.IsNullOrWhiteSpace(name))
+                    setName(name);
+            }
+
+            if (result.TryGetProperty("avatar", out var avatarElement))
+            {
+                var avatar = avatarElement.GetString()?.Trim();
+                if (!string.IsNullOrWhiteSpace(avatar))
+                    setAvatar(avatar);
+            }
+        }
+        catch
+        {
+            // DOM metadata is only a fallback; network-response parsing remains primary.
         }
     }
 
