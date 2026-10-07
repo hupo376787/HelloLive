@@ -3,6 +3,7 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="using:HelloLive.Core.Remote.ViewModels"
+    xmlns:controls="using:HelloLive.Core.Controls"
     x:DataType="vm:RemoteMainViewModel">
 
   <Grid Background="{DynamicResource RemoteBackgroundBrush}">
@@ -17,12 +18,10 @@
                   Height="52"
                   CornerRadius="13"
                   Background="#20FFFFFF"
-                  Padding="5"
+                  Padding="4"
                   ClipToBounds="True"
                   VerticalAlignment="Center">
-            <Image Source="avares://HelloLive.Core/Assets/app-icon.png"
-                   Stretch="Uniform"
-                   IsHitTestVisible="False" />
+            <controls:LiveLogo />
           </Border>
           <StackPanel Grid.Column="1" VerticalAlignment="Center">
             <TextBlock Text="HelloLive Remote"
