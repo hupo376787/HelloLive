@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
+using Avalonia.Threading;
 using HelloLive.Core.Models;
 using HelloLive.Core.ViewModels;
 using System.Diagnostics;
@@ -11,6 +12,9 @@ public partial class MainWindow : Window
 {
     private bool _allowClose;
     private bool _shutdownInProgress;
+    private LiveMonitorTarget? _editingUrlTarget;
+
+    public event EventHandler? MinimizeToTrayRequested;
 
     public MainWindow()
     {
@@ -18,7 +22,7 @@ public partial class MainWindow : Window
         Closing += MainWindow_Closing;
     }
 
-    private async void MainWindow_Closing(
+    private void MainWindow_Closing(
         object? sender,
         WindowClosingEventArgs e)
     {
@@ -26,22 +30,7 @@ public partial class MainWindow : Window
             return;
 
         e.Cancel = true;
-        if (_shutdownInProgress)
-            return;
-
-        _shutdownInProgress = true;
-        try
-        {
-            if (DataContext is MainWindowViewModel viewModel)
-                await viewModel.PrepareForShutdownAsync();
-
-            _allowClose = true;
-            Close();
-        }
-        finally
-        {
-            _shutdownInProgress = false;
-        }
+        ShowCloseConfirmation();
     }
 
     private void TitleBar_PointerPressed(object? sender, PointerPressedEventArgs e)
@@ -71,7 +60,66 @@ public partial class MainWindow : Window
             : WindowState.Maximized;
 
     private void CloseButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-        => Close();
+        => ShowCloseConfirmation();
+
+    private void ShowCloseConfirmation()
+    {
+        EditUrlOverlay.IsVisible = false;
+        CloseConfirmOverlay.IsVisible = true;
+    }
+
+    /// <summary>
+    /// 供桌面托盘“退出程序”复用与右上角关闭按钮完全相同的确认流程。
+    /// </summary>
+    public void RequestCloseConfirmation()
+        => ShowCloseConfirmation();
+
+    private void CloseCancelButton_Click(
+        object? sender,
+        Avalonia.Interactivity.RoutedEventArgs e)
+        => CloseConfirmOverlay.IsVisible = false;
+
+    private void CloseMinimizeToTrayButton_Click(
+        object? sender,
+        Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        CloseConfirmOverlay.IsVisible = false;
+
+        if (MinimizeToTrayRequested is { } handler)
+        {
+            handler(this, EventArgs.Empty);
+            return;
+        }
+
+        WindowState = WindowState.Minimized;
+    }
+
+    private async void CloseConfirmButton_Click(
+        object? sender,
+        Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (_shutdownInProgress)
+            return;
+
+        _shutdownInProgress = true;
+        CloseConfirmOverlay.IsVisible = false;
+        try
+        {
+            if (DataContext is MainWindowViewModel viewModel)
+                await viewModel.PrepareForShutdownAsync();
+
+            _allowClose = true;
+            Close();
+        }
+        catch
+        {
+            CloseConfirmOverlay.IsVisible = true;
+        }
+        finally
+        {
+            _shutdownInProgress = false;
+        }
+    }
 
 
     private async void CheckTargetButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -211,6 +259,88 @@ public partial class MainWindow : Window
         };
 
         return target is not null;
+    }
+
+
+    private void EditMonitorUrlButton_Click(
+        object? sender,
+        Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (!TryGetMonitorTarget(sender, out var target))
+            return;
+
+        _editingUrlTarget = target;
+        EditUrlTargetText.Text = $"当前：{target.DisplayName}";
+        EditUrlTextBox.Text = target.ProfileUrl;
+        EditUrlErrorText.Text = string.Empty;
+        EditUrlErrorText.IsVisible = false;
+        CloseConfirmOverlay.IsVisible = false;
+        EditUrlOverlay.IsVisible = true;
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            EditUrlTextBox.Focus();
+            EditUrlTextBox.SelectAll();
+        });
+    }
+
+    private void EditUrlCancelButton_Click(
+        object? sender,
+        Avalonia.Interactivity.RoutedEventArgs e)
+        => CloseEditUrlOverlay();
+
+    private async void EditUrlConfirmButton_Click(
+        object? sender,
+        Avalonia.Interactivity.RoutedEventArgs e)
+        => await SaveEditedUrlAsync();
+
+    private async void EditUrlTextBox_KeyDown(
+        object? sender,
+        KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape)
+        {
+            CloseEditUrlOverlay();
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.Enter)
+        {
+            e.Handled = true;
+            await SaveEditedUrlAsync();
+        }
+    }
+
+    private async Task SaveEditedUrlAsync()
+    {
+        if (_editingUrlTarget is not { } target
+            || DataContext is not MainWindowViewModel viewModel)
+        {
+            CloseEditUrlOverlay();
+            return;
+        }
+
+        var error = await viewModel.UpdateMonitorUrlAsync(
+            target,
+            EditUrlTextBox.Text ?? string.Empty);
+
+        if (!string.IsNullOrWhiteSpace(error))
+        {
+            EditUrlErrorText.Text = error;
+            EditUrlErrorText.IsVisible = true;
+            return;
+        }
+
+        CloseEditUrlOverlay();
+    }
+
+    private void CloseEditUrlOverlay()
+    {
+        EditUrlOverlay.IsVisible = false;
+        EditUrlErrorText.IsVisible = false;
+        EditUrlErrorText.Text = string.Empty;
+        _editingUrlTarget = null;
     }
 
 
