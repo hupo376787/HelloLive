@@ -75,9 +75,9 @@ internal static class FlvStreamWriter
         while (await TryReadExactlyAsync(input, tagHeader, cancellationToken))
         {
             var dataSize = ReadUInt24BigEndian(tagHeader.AsSpan(1, 3));
-            var originalTimestamp =
+            uint originalTimestamp =
                 ((uint)tagHeader[7] << 24)
-                | ReadUInt24BigEndian(tagHeader.AsSpan(4, 3));
+                | (uint)ReadUInt24BigEndian(tagHeader.AsSpan(4, 3));
 
             var tagType = tagHeader[0] & 0x1F;
             var isMediaTag = tagType is 8 or 9;
@@ -85,9 +85,9 @@ internal static class FlvStreamWriter
             if (isMediaTag && baseTimestamp is null)
                 baseTimestamp = originalTimestamp;
 
-            var normalizedTimestamp = baseTimestamp is { } start
+            uint normalizedTimestamp = baseTimestamp is { } start
                 ? NormalizeTimestamp(originalTimestamp, start)
-                : 0;
+                : 0u;
 
             // FLV DTS should normally be monotonic. If the upstream stream has a tiny
             // backward jump, do not let a player interpret it as another huge duration.
