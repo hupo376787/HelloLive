@@ -486,6 +486,9 @@
                         <MenuItem Header="打开主页"
                                   Tag="{Binding}"
                                   Click="OpenProfileButton_Click" />
+                        <MenuItem Header="修改 URL"
+                                  Tag="{Binding}"
+                                  Click="EditMonitorUrlButton_Click" />
                         <Separator />
                         <MenuItem Header="移除监控"
                                   Tag="{Binding}"
@@ -612,6 +615,101 @@
               </ListBox.ItemTemplate>
             </ListBox>
           </Grid>
+        </Border>
+      </Grid>
+
+      <!-- 修改监控 URL：使用与主窗口一致的卡片、颜色和按钮风格。 -->
+      <Grid x:Name="EditUrlOverlay"
+            Grid.RowSpan="2"
+            Background="#99000000"
+            IsVisible="False"
+            Panel.ZIndex="3000">
+        <Border Width="570"
+                Padding="24"
+                CornerRadius="12"
+                Background="{DynamicResource CardColor}"
+                BorderBrush="{DynamicResource BorderColor}"
+                BorderThickness="1"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+          <StackPanel Spacing="16">
+            <StackPanel Spacing="6">
+              <TextBlock Text="修改监控 URL"
+                         FontSize="21"
+                         FontWeight="SemiBold" />
+              <TextBlock x:Name="EditUrlTargetText"
+                         Classes="caption"
+                         TextWrapping="Wrap" />
+              <TextBlock Text="修改后会停止该条目的当前录像，清除旧作者身份与头像，并立即重新检查新地址。"
+                         Classes="caption"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+
+            <TextBox x:Name="EditUrlTextBox"
+                     MinHeight="44"
+                     Padding="12,0"
+                     VerticalContentAlignment="Center"
+                     Watermark="https://live.kuaishou.com/profile/..."
+                     KeyDown="EditUrlTextBox_KeyDown" />
+
+            <TextBlock x:Name="EditUrlErrorText"
+                       Foreground="#EF4444"
+                       TextWrapping="Wrap"
+                       IsVisible="False" />
+
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+              <Button Content="取消"
+                      MinHeight="40"
+                      Click="EditUrlCancelButton_Click" />
+              <Button Grid.Column="1"
+                      Classes="primary"
+                      Content="保存并检查"
+                      MinHeight="40"
+                      Click="EditUrlConfirmButton_Click" />
+            </Grid>
+          </StackPanel>
+        </Border>
+      </Grid>
+
+      <!-- 关闭确认：正常退出前先安全停止录像，也可最小化到托盘继续监控。 -->
+      <Grid x:Name="CloseConfirmOverlay"
+            Grid.RowSpan="2"
+            Background="#99000000"
+            IsVisible="False"
+            Panel.ZIndex="3100">
+        <Border Width="560"
+                Padding="24"
+                CornerRadius="12"
+                Background="{DynamicResource CardColor}"
+                BorderBrush="{DynamicResource BorderColor}"
+                BorderThickness="1"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+          <StackPanel Spacing="17">
+            <StackPanel Spacing="6">
+              <TextBlock Text="确认退出？"
+                         FontSize="21"
+                         FontWeight="SemiBold" />
+              <TextBlock Text="确认退出后，当前直播监控和录像任务将安全停止；选择最小化到托盘则继续在后台运行。"
+                         Classes="caption"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+              <Button Content="取消"
+                      MinHeight="42"
+                      Click="CloseCancelButton_Click" />
+              <Button Grid.Column="1"
+                      Classes="primary"
+                      Content="最小化到托盘"
+                      MinHeight="42"
+                      Click="CloseMinimizeToTrayButton_Click" />
+              <Button Grid.Column="2"
+                      Classes="coral"
+                      Content="确认退出"
+                      MinHeight="42"
+                      Click="CloseConfirmButton_Click" />
+            </Grid>
+          </StackPanel>
         </Border>
       </Grid>
     </Grid>
