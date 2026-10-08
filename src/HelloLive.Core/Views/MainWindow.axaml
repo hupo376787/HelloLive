@@ -87,6 +87,23 @@
     </Style>
     <Style Selector="ListBox.monitorList ListBoxItem:selected">
       <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="ListBox.monitorList ListBoxItem:pointerover">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="ListBox.monitorList ListBoxItem:selected:pointerover">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="ListBox.monitorList ListBoxItem:focus">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="ListBox.monitorList ListBoxItem:focus-within">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
     <Style Selector="Button.monitorAction">
       <Setter Property="MinHeight" Value="34" />
@@ -614,16 +631,13 @@
                                   CornerRadius="4"
                                   Background="#10B981"
                                   VerticalAlignment="Center" />
-                          <StackPanel Grid.Column="1" Spacing="1">
-                            <TextBlock Text="{Binding RecordingStatus}"
-                                       FontSize="12"
-                                       FontWeight="SemiBold"
-                                       Foreground="#10B981"
-                                       TextWrapping="Wrap" />
-                            <TextBlock Classes="caption"
-                                       Text="{Binding RecordingFileName, StringFormat='录像文件 · {0}'}"
-                                       TextTrimming="CharacterEllipsis" />
-                          </StackPanel>
+                          <TextBlock Grid.Column="1"
+                                     Text="{Binding RecordingStatus}"
+                                     FontSize="12"
+                                     FontWeight="SemiBold"
+                                     Foreground="#10B981"
+                                     TextTrimming="CharacterEllipsis"
+                                     VerticalAlignment="Center" />
                         </Grid>
                       </Border>
 
