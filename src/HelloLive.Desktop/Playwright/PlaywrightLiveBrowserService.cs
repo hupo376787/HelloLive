@@ -223,8 +223,20 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
                     name => authorNameFromApi ??= name,
                     avatar => avatarUrlFromApi ??= avatar);
 
-                if (!string.IsNullOrWhiteSpace(authorNameFromApi))
-                    stream = stream with { AuthorName = authorNameFromApi };
+                // The stream response is the strongest evidence for the live author's
+                // nickname. Kuaishou may continue loading recommendation GraphQL after
+                // the FLV URL is found; those responses can contain other creators.
+                // Never let a later recommendation overwrite the name captured with
+                // the actual live stream.
+                var resolvedAuthorName = !string.IsNullOrWhiteSpace(stream.AuthorName)
+                    ? stream.AuthorName
+                    : authorNameFromApi;
+
+                if (string.IsNullOrWhiteSpace(stream.AuthorName)
+                    && !string.IsNullOrWhiteSpace(resolvedAuthorName))
+                {
+                    stream = stream with { AuthorName = resolvedAuthorName };
+                }
 
                 var authorId = authorIdFromApi
                                ?? LiveAuthorIdentityHelper.ExtractStableAuthorId(
@@ -236,7 +248,7 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
                     stream,
                     page.Url,
                     authorId,
-                    authorNameFromApi,
+                    resolvedAuthorName,
                     avatarUrlFromApi);
             }
 
