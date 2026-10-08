@@ -6,6 +6,7 @@ using Avalonia.Platform;
 using HelloLive.Core.Services.Monitoring;
 using HelloLive.Core.Services.Settings;
 using HelloLive.Core.Sites;
+using HelloLive.Core.Sites.Douyin;
 using HelloLive.Core.Sites.Kuaishou;
 using HelloLive.Core.ViewModels;
 using HelloLive.Core.Views;
@@ -75,7 +76,8 @@ public partial class App : Application
             splash.SetProgress(30, "正在加载平台模块…", "初始化快手、抖音直播适配器");
             var platforms = new LivePlatformRegistry(new ILivePlatformAdapter[]
             {
-                new KuaishouLiveAdapter()
+                new KuaishouLiveAdapter(),
+                new DouyinLiveAdapter()
             });
 
             splash.SetProgress(44, "正在准备浏览器…", "初始化无头 Chromium 探测服务");
