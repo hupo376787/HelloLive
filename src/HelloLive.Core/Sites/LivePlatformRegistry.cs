@@ -1,4 +1,5 @@
 using HelloLive.Core.Models;
+using HelloLive.Core.Utilities;
 
 namespace HelloLive.Core.Sites;
 
@@ -25,4 +26,19 @@ public sealed class LivePlatformRegistry
 
     public ILivePlatformAdapter? ResolveByProfileUrl(string url)
         => _adapters.FirstOrDefault(x => x.CanHandleProfileUrl(url));
+
+    /// <summary>
+    /// Accepts either a plain URL or arbitrary share text containing a URL.
+    /// Returns the first supported platform URL extracted from the input.
+    /// </summary>
+    public ILivePlatformAdapter? ResolveByInput(
+        string input,
+        out string extractedUrl)
+    {
+        extractedUrl = UrlInputHelper.ExtractFirstHttpUrl(input);
+        if (string.IsNullOrWhiteSpace(extractedUrl))
+            extractedUrl = (input ?? string.Empty).Trim();
+
+        return ResolveByProfileUrl(extractedUrl);
+    }
 }
