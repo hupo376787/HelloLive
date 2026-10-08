@@ -494,7 +494,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         var adapter = _platforms.ResolveByInput(input, out var extractedUrl);
         if (adapter is null)
         {
-            AddLog("未能从输入内容中识别受支持的作者主页或分享链接。当前版本已支持快手和抖音。");
+            AddLog("未能从输入内容中识别已支持的平台地址，请检查链接是否正确或该平台是否已启用解析器。");
             return;
         }
 
