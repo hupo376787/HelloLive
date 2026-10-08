@@ -353,25 +353,17 @@ public partial class MainWindow : Window
     }
 
 
-    private void OpenProfileButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private async void OpenProfileButton_Click(
+        object? sender,
+        Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (!TryGetMonitorTarget(sender, out var target)
-            || string.IsNullOrWhiteSpace(target.ProfileUrl))
+            || string.IsNullOrWhiteSpace(target.ProfileUrl)
+            || DataContext is not MainWindowViewModel viewModel)
         {
             return;
         }
 
-        try
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = target.ProfileUrl,
-                UseShellExecute = true
-            });
-        }
-        catch
-        {
-            // 不让系统浏览器启动失败影响监控主流程。
-        }
+        await viewModel.OpenBrowserAsync(target.ProfileUrl);
     }
 }
