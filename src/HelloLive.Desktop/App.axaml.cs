@@ -73,7 +73,7 @@ public partial class App : Application
             var settingsService = new SettingsService();
             var monitorStore = new MonitorStore(settingsService.SettingsPath);
 
-            splash.SetProgress(30, "正在加载平台模块…", "初始化快手、抖音直播适配器");
+            splash.SetProgress(30, "正在加载平台模块…", "初始化直播平台适配器");
             var platforms = new LivePlatformRegistry(new ILivePlatformAdapter[]
             {
                 new KuaishouLiveAdapter(),
