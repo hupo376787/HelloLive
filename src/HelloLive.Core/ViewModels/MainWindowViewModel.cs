@@ -8,6 +8,7 @@ using HelloLive.Core.Models;
 using HelloLive.Core.Services.Browser;
 using HelloLive.Core.Services.Images;
 using HelloLive.Core.Services.Monitoring;
+using HelloLive.Core.Services.Notifications;
 using HelloLive.Core.Services.Settings;
 using HelloLive.Core.Sites;
 using HelloLive.Core.Utilities;
@@ -25,7 +26,9 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private readonly MonitorStore _monitorStore;
     private readonly AppSettings _settings;
     private readonly ImageCacheService _imageCache = new();
+    private readonly PushPlusNotificationService _pushPlusNotification = new();
     private readonly Dictionary<string, string> _loadedAvatarUrls = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, bool> _lastConfirmedLiveStates = new(StringComparer.Ordinal);
     private readonly SemaphoreSlim _saveGate = new(1, 1);
 
     private string _newMonitorUrl = string.Empty;
@@ -38,6 +41,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private bool _autoStartMonitoring;
     private bool _isMonitoring;
     private bool _isMonitorPanelVisible;
+    private string _pushPlusToken = string.Empty;
     private string _currentTask = "等待任务";
     private string _browserStatusText = "尚未检查 Chromium";
     private bool _isChromiumInstalling;
@@ -66,17 +70,16 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         _monitorStore = monitorStore;
         _settings = settingsService.Load();
 
-        // Saved monitor targets are always probed headlessly. Older debug builds
-        // allowed this setting to be false, which caused Chromium windows to pop up
-        // on every polling cycle. Migrate that state to the new fixed behavior.
-        _headlessMode = true;
-        _settings.HeadlessMode = true;
+        // This switch controls user-triggered checks only. Background polling is
+        // forced to headless inside LiveMonitorCoordinator and never uses this value.
+        _headlessMode = _settings.HeadlessMode;
         _maxConcurrentPages = _settings.MaxConcurrentPages;
         _checkIntervalSeconds = _settings.CheckIntervalSeconds;
         _checkTimeoutSeconds = _settings.CheckTimeoutSeconds;
         _blockImagesAndFonts = _settings.BlockImagesAndFonts;
         _autoStartMonitoring = _settings.AutoStartMonitoring;
         _isMonitorPanelVisible = _settings.MonitorPanelVisible;
+        _pushPlusToken = _settings.PushPlusToken ?? string.Empty;
         _remoteApiEnabled = _settings.RemoteApiEnabled;
         _remoteApiPort = _settings.RemoteApiPort;
         _remoteApiToken = _settings.RemoteApiToken;
@@ -143,6 +146,20 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             _settings.HeadlessMode = value;
             PersistSettingsSoon();
             RefreshCoordinatorState();
+        }
+    }
+
+    public string PushPlusToken
+    {
+        get => _pushPlusToken;
+        set
+        {
+            var normalized = (value ?? string.Empty).Trim();
+            if (!SetProperty(ref _pushPlusToken, normalized))
+                return;
+
+            _settings.PushPlusToken = normalized;
+            PersistSettingsSoon();
         }
     }
 
@@ -446,6 +463,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         // 运行态身份/头像/流信息，避免界面和录像目录继续沿用旧数据。
         await _coordinator.StopRecordingAsync(target.Id);
         _loadedAvatarUrls.Remove(target.Id);
+        _lastConfirmedLiveStates.Remove(target.Id);
 
         target.PlatformId = adapter.Id;
         target.ProfileUrl = normalizedUrl;
@@ -484,6 +502,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
         await _coordinator.StopRecordingAsync(target.Id);
         _loadedAvatarUrls.Remove(target.Id);
+        _lastConfirmedLiveStates.Remove(target.Id);
         target.PropertyChanged -= Target_PropertyChanged;
         Monitors.Remove(target);
         await SaveMonitorsAsync();
@@ -570,11 +589,57 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
             target.ApplyResult(result);
             _ = LoadMonitorAvatarAsync(target);
+            HandleLiveTransitionForPushPlus(target, result);
             CurrentTask = result.State == LiveMonitorState.Checking
                 ? $"正在检查：{target.DisplayName}"
                 : $"{target.DisplayName} · {target.StateText}";
             RaiseMetricsChanged();
         });
+    }
+
+    private void HandleLiveTransitionForPushPlus(
+        LiveMonitorTarget target,
+        LiveCheckResult result)
+    {
+        if (result.State == LiveMonitorState.Checking)
+            return;
+
+        if (result.State == LiveMonitorState.NotDetected)
+        {
+            _lastConfirmedLiveStates[target.Id] = false;
+            return;
+        }
+
+        if (result.State != LiveMonitorState.Live)
+            return;
+
+        var wasLive = _lastConfirmedLiveStates.TryGetValue(
+            target.Id,
+            out var previous)
+            && previous;
+        _lastConfirmedLiveStates[target.Id] = true;
+
+        if (wasLive || string.IsNullOrWhiteSpace(PushPlusToken))
+            return;
+
+        _ = SendLiveStartedPushPlusAsync(target);
+    }
+
+    private async Task SendLiveStartedPushPlusAsync(LiveMonitorTarget target)
+    {
+        try
+        {
+            await _pushPlusNotification.SendLiveStartedAsync(
+                PushPlusToken,
+                target);
+            Dispatcher.UIThread.Post(() =>
+                AddLog($"PushPlus 开播提醒已发送：{target.DisplayName}"));
+        }
+        catch (Exception ex)
+        {
+            Dispatcher.UIThread.Post(() =>
+                AddLog($"PushPlus 开播提醒发送失败：{ex.Message}"));
+        }
     }
 
     private void Coordinator_RecordingStateChanged(LiveRecordingState state)
@@ -960,6 +1025,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         await _coordinator.DisposeAsync();
         await _settingsService.SaveAsync(_settings);
         await SaveMonitorsAsync();
+        _pushPlusNotification.Dispose();
         _imageCache.Dispose();
         _saveGate.Dispose();
     }
