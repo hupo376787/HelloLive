@@ -262,7 +262,7 @@ public partial class MainWindow : Window
     }
 
 
-    private void EditMonitorUrlButton_Click(
+    private void EditAuthorInfoButton_Click(
         object? sender,
         Avalonia.Interactivity.RoutedEventArgs e)
     {
@@ -270,7 +270,11 @@ public partial class MainWindow : Window
             return;
 
         _editingUrlTarget = target;
-        EditUrlTargetText.Text = $"当前：{target.DisplayName}";
+        EditUrlTargetText.Text = string.IsNullOrWhiteSpace(target.AuthorId)
+            ? $"当前：{target.DisplayName}"
+            : $"当前：{target.DisplayName} · 作者ID：{target.AuthorId}";
+        EditAuthorNameTextBox.Text = target.DisplayName;
+        EditAvatarUrlTextBox.Text = target.AvatarUrl ?? string.Empty;
         EditUrlTextBox.Text = target.ProfileUrl;
         EditUrlErrorText.Text = string.Empty;
         EditUrlErrorText.IsVisible = false;
@@ -279,8 +283,8 @@ public partial class MainWindow : Window
 
         Dispatcher.UIThread.Post(() =>
         {
-            EditUrlTextBox.Focus();
-            EditUrlTextBox.SelectAll();
+            EditAuthorNameTextBox.Focus();
+            EditAuthorNameTextBox.SelectAll();
         });
     }
 
@@ -321,8 +325,10 @@ public partial class MainWindow : Window
             return;
         }
 
-        var error = await viewModel.UpdateMonitorUrlAsync(
+        var error = await viewModel.UpdateMonitorAuthorInfoAsync(
             target,
+            EditAuthorNameTextBox.Text ?? string.Empty,
+            EditAvatarUrlTextBox.Text ?? string.Empty,
             EditUrlTextBox.Text ?? string.Empty);
 
         if (!string.IsNullOrWhiteSpace(error))
@@ -340,6 +346,9 @@ public partial class MainWindow : Window
         EditUrlOverlay.IsVisible = false;
         EditUrlErrorText.IsVisible = false;
         EditUrlErrorText.Text = string.Empty;
+        EditAuthorNameTextBox.Text = string.Empty;
+        EditAvatarUrlTextBox.Text = string.Empty;
+        EditUrlTextBox.Text = string.Empty;
         _editingUrlTarget = null;
     }
 
