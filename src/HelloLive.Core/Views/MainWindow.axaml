@@ -285,35 +285,6 @@
 
               <Border Classes="card">
                 <StackPanel Spacing="10">
-                  <TextBlock Text="FFmpeg" FontSize="18" FontWeight="SemiBold" />
-                  <TextBlock Classes="caption"
-                             Text="HLS 直播录制需要 FFmpeg。点击后会在后台从 gyan.dev 下载 Windows release essentials，并安装到 EXE 同级的 ffmpeg\bin 目录；安装完成无需重启。HTTP-FLV 录制不依赖 FFmpeg。"
-                             TextWrapping="Wrap" />
-                  <Button Content="{Binding InstallFfmpegButtonText}"
-                          Command="{Binding InstallFfmpegCommand}"
-                          MinHeight="38"
-                          HorizontalAlignment="Stretch"
-                          HorizontalContentAlignment="Center"
-                          IsVisible="{Binding IsFfmpegAutoInstallSupported}" />
-                  <StackPanel IsVisible="{Binding IsFfmpegInstallProgressVisible}"
-                              Spacing="4">
-                    <ProgressBar Minimum="0"
-                                 Maximum="100"
-                                 Height="8"
-                                 IsIndeterminate="{Binding IsFfmpegInstallProgressIndeterminate}"
-                                 Value="{Binding FfmpegInstallProgressPercent}" />
-                    <TextBlock Classes="caption"
-                               Text="{Binding FfmpegInstallProgressText}"
-                               TextWrapping="Wrap" />
-                  </StackPanel>
-                  <TextBlock Classes="caption"
-                             Text="{Binding FfmpegStatusText}"
-                             TextWrapping="Wrap" />
-                </StackPanel>
-              </Border>
-
-              <Border Classes="card">
-                <StackPanel Spacing="10">
                   <TextBlock Text="监控策略" FontSize="18" FontWeight="SemiBold" />
                   <Grid ColumnDefinitions="*,120" ColumnSpacing="12">
                     <StackPanel>
@@ -365,20 +336,55 @@
                             Content="立即检查全部"
                             Command="{Binding CheckAllCommand}" />
                   </Grid>
+                </StackPanel>
+              </Border>
+
+              <Border Classes="card">
+                <StackPanel Spacing="10">
+                  <TextBlock Text="直播录像" FontSize="18" FontWeight="SemiBold" />
                   <TextBlock Classes="caption"
-                             Text="每个检查只临时创建 Page；抓到 FLV/HLS 后立即中止浏览器媒体下载并关闭 Page，录制器会用独立连接实时落盘。"
+                             Text="发现 FLV/HLS 后会立即关闭用于探测的临时 Page，并由独立录制连接持续实时保存。"
                              TextWrapping="Wrap" />
-                  <Border Height="1" Margin="0,3" Background="{DynamicResource BorderColor}" />
-                  <TextBlock Text="直播录像目录" FontWeight="Medium" />
+                  <TextBlock Text="录像目录" FontWeight="Medium" />
                   <TextBlock Classes="caption"
                              Text="{Binding DownloadRoot}"
                              TextWrapping="Wrap" />
                   <Button Content="打开录像目录"
                           MinHeight="38"
                           HorizontalAlignment="Stretch"
+                          HorizontalContentAlignment="Center"
                           Click="OpenDownloadRootButton_Click" />
                   <TextBlock Classes="caption"
-                             Text="目录结构与 HelloCrab 一致：Download / 平台 / 昵称(作者ID) / yyyy-MM-dd HH-mm-ss.flv"
+                             Text="目录结构：Download / 平台 / 昵称(作者ID) / yyyy-MM-dd HH-mm-ss.flv"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+              </Border>
+
+              <Border Classes="card">
+                <StackPanel Spacing="10">
+                  <TextBlock Text="FFmpeg" FontSize="18" FontWeight="SemiBold" />
+                  <TextBlock Classes="caption"
+                             Text="HLS 直播录制需要 FFmpeg。点击后会在后台从 gyan.dev 下载 Windows release essentials，并安装到 EXE 同级的 ffmpeg\bin 目录；安装完成无需重启。HTTP-FLV 录制不依赖 FFmpeg。"
+                             TextWrapping="Wrap" />
+                  <Button Content="{Binding InstallFfmpegButtonText}"
+                          Command="{Binding InstallFfmpegCommand}"
+                          MinHeight="38"
+                          HorizontalAlignment="Stretch"
+                          HorizontalContentAlignment="Center"
+                          IsVisible="{Binding IsFfmpegAutoInstallSupported}" />
+                  <StackPanel IsVisible="{Binding IsFfmpegInstallProgressVisible}"
+                              Spacing="4">
+                    <ProgressBar Minimum="0"
+                                 Maximum="100"
+                                 Height="8"
+                                 IsIndeterminate="{Binding IsFfmpegInstallProgressIndeterminate}"
+                                 Value="{Binding FfmpegInstallProgressPercent}" />
+                    <TextBlock Classes="caption"
+                               Text="{Binding FfmpegInstallProgressText}"
+                               TextWrapping="Wrap" />
+                  </StackPanel>
+                  <TextBlock Classes="caption"
+                             Text="{Binding FfmpegStatusText}"
                              TextWrapping="Wrap" />
                 </StackPanel>
               </Border>
