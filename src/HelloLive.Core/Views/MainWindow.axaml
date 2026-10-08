@@ -241,7 +241,7 @@
                     <StackPanel Spacing="2">
                       <TextBlock Text="手动检查：无头浏览" FontWeight="Medium" />
                       <TextBlock Classes="caption"
-                                 Text="仅影响“立即检查全部”和监控项“立即检查”。关闭后会显示 Chromium 便于人工查看；后台轮询始终强制无头，不受此开关影响。右键“打开主页”始终使用正常浏览器。"
+                                 Text="仅影响“立即检查全部”。关闭后执行“立即检查全部”会显示 Chromium 便于人工查看；新加入监控、后台轮询和监控项右键“立即检查”始终强制无头，不受此开关影响。右键“打开主页”始终使用正常浏览器。"
                                  TextWrapping="Wrap" />
                     </StackPanel>
                     <ToggleSwitch Grid.Column="1"
@@ -301,15 +301,21 @@
                   <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
                     <Button Classes="coral"
                             MinHeight="40"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
                             Content="开始监控"
                             Command="{Binding StartMonitoringCommand}" />
                     <Button Grid.Column="1"
                             MinHeight="40"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
                             Content="停止监控"
                             Command="{Binding StopMonitoringCommand}" />
                     <Button Grid.Column="2"
                             Classes="primary"
                             MinHeight="40"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
                             Content="立即检查全部"
                             Command="{Binding CheckAllCommand}" />
                   </Grid>
