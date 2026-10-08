@@ -264,37 +264,7 @@
                 </StackPanel>
               </Border>
 
-              <Border Classes="card">
-                <StackPanel Spacing="10">
-                  <TextBlock Text="浏览器" FontSize="18" FontWeight="SemiBold" />
-                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                    <StackPanel Spacing="2">
-                      <TextBlock Text="手动检查：无头浏览" FontWeight="Medium" />
-                      <TextBlock Classes="caption"
-                                 Text="仅影响“立即检查全部”。关闭后执行“立即检查全部”会显示 Chromium 便于人工查看；新加入监控、后台轮询和监控项右键“立即检查”始终强制无头，不受此开关影响。右键“打开主页”始终使用正常浏览器。"
-                                 TextWrapping="Wrap" />
-                    </StackPanel>
-                    <ToggleSwitch Grid.Column="1"
-                                  IsChecked="{Binding HeadlessMode, Mode=TwoWay}"
-                                  OnContent="开"
-                                  OffContent="关"
-                                  VerticalAlignment="Center" />
-                  </Grid>
-                  <CheckBox Content="阻止图片和字体，降低页面资源占用"
-                            IsChecked="{Binding BlockImagesAndFonts, Mode=TwoWay}" />
-                  <Button Content="安装 / 更新 Chromium"
-                          Command="{Binding InstallChromiumCommand}" />
-                  <TextBlock Classes="caption"
-                             Text="{Binding BrowserStatusText}"
-                             TextWrapping="Wrap" />
-                  <StackPanel IsVisible="{Binding IsChromiumInstallProgressVisible}" Spacing="5">
-                    <ProgressBar Minimum="0" Maximum="100" Height="8"
-                                 IsIndeterminate="{Binding IsChromiumInstallProgressIndeterminate}"
-                                 Value="{Binding ChromiumInstallProgressPercent}" />
-                    <TextBlock Classes="caption" Text="{Binding ChromiumInstallProgressText}" />
-                  </StackPanel>
-                </StackPanel>
-              </Border>
+
 
               <Border Classes="card">
                 <StackPanel Spacing="10">
@@ -370,6 +340,38 @@
                   <TextBlock Classes="caption"
                              Text="目录结构：Download / 平台 / 昵称(作者ID) / yyyy-MM-dd HH-mm-ss.flv"
                              TextWrapping="Wrap" />
+                </StackPanel>
+              </Border>
+
+              <Border Classes="card">
+                <StackPanel Spacing="10">
+                  <TextBlock Text="浏览器" FontSize="18" FontWeight="SemiBold" />
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="手动检查：无头浏览" FontWeight="Medium" />
+                      <TextBlock Classes="caption"
+                                 Text="仅影响“立即检查全部”。关闭后执行“立即检查全部”会显示 Chromium 便于人工查看；新加入监控、后台轮询和监控项右键“立即检查”始终强制无头，不受此开关影响。右键“打开主页”始终使用正常浏览器。"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1"
+                                  IsChecked="{Binding HeadlessMode, Mode=TwoWay}"
+                                  OnContent="开"
+                                  OffContent="关"
+                                  VerticalAlignment="Center" />
+                  </Grid>
+                  <CheckBox Content="阻止图片和字体，降低页面资源占用"
+                            IsChecked="{Binding BlockImagesAndFonts, Mode=TwoWay}" />
+                  <Button Content="安装 / 更新 Chromium"
+                          Command="{Binding InstallChromiumCommand}" />
+                  <TextBlock Classes="caption"
+                             Text="{Binding BrowserStatusText}"
+                             TextWrapping="Wrap" />
+                  <StackPanel IsVisible="{Binding IsChromiumInstallProgressVisible}" Spacing="5">
+                    <ProgressBar Minimum="0" Maximum="100" Height="8"
+                                 IsIndeterminate="{Binding IsChromiumInstallProgressIndeterminate}"
+                                 Value="{Binding ChromiumInstallProgressPercent}" />
+                    <TextBlock Classes="caption" Text="{Binding ChromiumInstallProgressText}" />
+                  </StackPanel>
                 </StackPanel>
               </Border>
 
