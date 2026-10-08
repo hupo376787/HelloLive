@@ -686,6 +686,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         FfmpegInstallProgressText = "准备下载 FFmpeg…";
         AddLog($"开始下载 FFmpeg，安装目录：{_ffmpegInstaller.InstallDirectory}");
 
+        var installSucceeded = false;
         try
         {
             var progress = new Progress<FfmpegInstallProgress>(value =>
@@ -712,6 +713,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             FfmpegStatusText = $"FFmpeg 已可用：{Path.GetDirectoryName(result.FfmpegPath)}";
             FfmpegInstallProgressText = "FFmpeg 安装完成，无需重启 HelloLive。";
             FfmpegInstallProgressPercent = 100;
+            installSucceeded = true;
             AddLog($"FFmpeg 安装完成：{result.FfmpegPath}");
         }
         catch (Exception ex)
@@ -725,6 +727,11 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             IsFfmpegInstalling = false;
             IsFfmpegInstallProgressIndeterminate = false;
             RefreshFfmpegStatus();
+
+            // 成功后收起进度区，只保留“已可用”的状态文本；
+            // 失败时继续显示错误详情，方便用户判断原因。
+            if (installSucceeded)
+                IsFfmpegInstallProgressVisible = false;
         }
     }
 
