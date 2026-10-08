@@ -33,7 +33,16 @@ public sealed class SplashWindow : Window
         Topmost = true;
         WindowDecorations = WindowDecorations.None;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
-        Background = new SolidColorBrush(Color.Parse("#FFF4F6FC"));
+
+        // The visible splash is the rounded Border below. The native window surface
+        // itself must be transparent; otherwise its rectangular background remains
+        // visible around the Border and produces the square corners seen on Windows.
+        Background = Brushes.Transparent;
+        TransparencyBackgroundFallback = Brushes.Transparent;
+        TransparencyLevelHint =
+        [
+            WindowTransparencyLevel.Transparent
+        ];
 
         TryApplyWindowIcon();
 
@@ -139,7 +148,7 @@ public sealed class SplashWindow : Window
 
         Content = new Border
         {
-            Margin = new Thickness(1),
+            Margin = new Thickness(2),
             Padding = new Thickness(34, 30),
             CornerRadius = new CornerRadius(18),
             Background = new SolidColorBrush(Color.Parse("#FFF9FAFE")),
