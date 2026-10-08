@@ -357,14 +357,23 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             return;
         }
 
-        var adapter = _platforms.ResolveByProfileUrl(input);
+        var adapter = _platforms.ResolveByInput(input, out var extractedUrl);
         if (adapter is null)
         {
-            AddLog("暂不支持这个地址。当前版本已实现快手适配器，其他平台可通过接口继续扩展。");
+            AddLog("未能从输入内容中识别受支持的作者主页或分享链接。当前版本已实现快手适配器。");
             return;
         }
 
-        var normalizedUrl = adapter.NormalizeProfileUrl(input);
+        string normalizedUrl;
+        try
+        {
+            normalizedUrl = await adapter.ResolveProfileUrlAsync(extractedUrl);
+        }
+        catch (Exception ex)
+        {
+            AddLog($"解析分享链接失败：{ex.Message}");
+            return;
+        }
         if (Monitors.Any(x => string.Equals(x.ProfileUrl, normalizedUrl, StringComparison.OrdinalIgnoreCase)))
         {
             AddLog("该地址已经在监控列表中。");
@@ -403,11 +412,19 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         if (string.IsNullOrWhiteSpace(input))
             return "请输入作者主页或直播分享地址。";
 
-        var adapter = _platforms.ResolveByProfileUrl(input);
+        var adapter = _platforms.ResolveByInput(input, out var extractedUrl);
         if (adapter is null)
-            return "暂不支持这个地址。当前版本已实现快手适配器。";
+            return "未能从输入内容中识别受支持的作者主页或分享链接。";
 
-        var normalizedUrl = adapter.NormalizeProfileUrl(input);
+        string normalizedUrl;
+        try
+        {
+            normalizedUrl = await adapter.ResolveProfileUrlAsync(extractedUrl);
+        }
+        catch (Exception ex)
+        {
+            return $"解析分享链接失败：{ex.Message}";
+        }
         if (Monitors.Any(x => !ReferenceEquals(x, target)
                               && string.Equals(
                                   x.ProfileUrl,
@@ -736,11 +753,19 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         if (string.IsNullOrWhiteSpace(input))
             return "请输入作者主页或直播分享地址。";
 
-        var adapter = _platforms.ResolveByProfileUrl(input);
+        var adapter = _platforms.ResolveByInput(input, out var extractedUrl);
         if (adapter is null)
-            return "暂不支持这个地址。当前版本已实现快手适配器。";
+            return "未能从输入内容中识别受支持的作者主页或分享链接。";
 
-        var normalizedUrl = adapter.NormalizeProfileUrl(input);
+        string normalizedUrl;
+        try
+        {
+            normalizedUrl = await adapter.ResolveProfileUrlAsync(extractedUrl);
+        }
+        catch (Exception ex)
+        {
+            return $"解析分享链接失败：{ex.Message}";
+        }
         if (Monitors.Any(x => string.Equals(x.ProfileUrl, normalizedUrl, StringComparison.OrdinalIgnoreCase)))
             return "该地址已经在监控列表中。";
 
