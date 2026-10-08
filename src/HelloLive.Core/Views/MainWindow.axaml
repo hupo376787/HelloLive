@@ -701,7 +701,7 @@
               <TextBlock x:Name="EditUrlTargetText"
                          Classes="caption"
                          TextWrapping="Wrap" />
-              <TextBlock Text="昵称和头像可直接修改；监控 URL 改变时会停止该作者当前录像，并立即重新检查新地址。"
+              <TextBlock Text="昵称和头像可直接修改；昵称留空表示恢复自动获取，下次检查会更新为平台最新昵称。监控 URL 改变时会停止该作者当前录像，并立即重新检查新地址。"
                          Classes="caption"
                          TextWrapping="Wrap" />
             </StackPanel>
@@ -712,7 +712,7 @@
                        MinHeight="42"
                        Padding="12,0"
                        VerticalContentAlignment="Center"
-                       Watermark="作者昵称"
+                       Watermark="作者昵称（留空则自动获取）"
                        KeyDown="EditUrlTextBox_KeyDown" />
             </StackPanel>
 
