@@ -11,7 +11,8 @@ HelloLive.Core
   ├─ Sites
   │   ├─ ILivePlatformAdapter
   │   ├─ LivePlatformRegistry
-  │   └─ KuaishouLiveAdapter
+  │   ├─ Kuaishou/KuaishouLiveAdapter
+  │   └─ Douyin/DouyinLiveAdapter
   ├─ Services
   │   ├─ Browser/ILiveBrowserService
   │   ├─ Monitoring/LiveMonitorCoordinator
@@ -27,7 +28,7 @@ HelloLive.Desktop -> HelloLive.Core
   └─ Program
 ```
 
-`Core` 不引用 `Microsoft.Playwright`。平台适配器只负责“识别平台 + 识别流 + 解析接口响应”，因此将来可以增加抖音、B站或其他直播平台，而不用改动调度器。
+`Core` 不引用 `Microsoft.Playwright`。平台适配器只负责“识别平台 + 识别流 + 解析接口响应”；快手、抖音都复用同一套调度器、浏览器生命周期和录像器，后续增加其他平台也无需改动调度器。
 
 ## 浏览器生命周期
 
@@ -56,11 +57,11 @@ Chromium 不按作者创建。最大并发由 `LiveMonitorCoordinator` 控制，
 
 ### TryParseStreamRequest
 
-用于真实媒体请求已经出现时快速抓取 URL。快手目前识别 HTTP-FLV 和 HLS。
+用于真实媒体请求已经出现时快速抓取 URL。快手识别 HTTP-FLV/HLS；抖音还会过滤桌面页抢先出现的 H.265 请求，优先等待 room API 中的 H.264 流。
 
 ### TryParseApiResponse
 
-用于平台先通过 JSON API 返回播放地址、播放器稍后才发媒体请求的场景。浏览器层负责读取小型文本响应，平台层负责判断其中是否存在自己的直播 URL。
+用于平台先通过 JSON API 返回播放地址、播放器稍后才发媒体请求的场景。浏览器层负责读取小型文本响应，平台层负责判断其中是否存在自己的直播 URL。抖音以 `/webcast/room/web/enter` 为主解析入口，从 `live_core_sdk_data.pull_data.stream_data` 中选择 H.264 HTTP-FLV，并同步提取主播 ID、昵称和头像。
 
 ### TryCheckDirectAsync
 
