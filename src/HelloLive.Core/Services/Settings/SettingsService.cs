@@ -66,7 +66,14 @@ public sealed class SettingsService
 
     private static AppSettings Normalize(AppSettings settings)
     {
-        settings.Version = 2;
+        var sourceVersion = settings.Version;
+
+        // v3: 后台轮询默认值由 60 秒调整为 300 秒，并增加 PushPlus 开播提醒。
+        // 仅迁移旧版仍保持默认 60 秒的配置；用户主动设置过的其他值保持不变。
+        if (sourceVersion < 3 && settings.CheckIntervalSeconds == 60)
+            settings.CheckIntervalSeconds = 300;
+
+        settings.Version = 3;
         settings.MaxConcurrentPages = Math.Clamp(settings.MaxConcurrentPages, 1, 8);
         settings.CheckIntervalSeconds = Math.Clamp(settings.CheckIntervalSeconds, 10, 3600);
         settings.CheckTimeoutSeconds = Math.Clamp(settings.CheckTimeoutSeconds, 5, 120);
