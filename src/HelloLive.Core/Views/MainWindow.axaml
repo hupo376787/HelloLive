@@ -497,26 +497,49 @@
                     </Border.ContextMenu>
                     <StackPanel Spacing="10">
                       <Grid ColumnDefinitions="58,*,Auto" ColumnSpacing="10">
-                        <Border Width="54"
-                                Height="54"
-                                CornerRadius="27"
-                                ClipToBounds="True"
-                                Background="#1E7C3AED"
-                                BorderBrush="#427C3AED"
-                                BorderThickness="1">
-                          <Grid>
-                            <TextBlock Text="{Binding AvatarInitial}"
-                                       FontSize="20"
+                        <Grid Width="58"
+                              Height="58">
+                          <Border Width="54"
+                                  Height="54"
+                                  CornerRadius="27"
+                                  ClipToBounds="True"
+                                  Background="#1E7C3AED"
+                                  BorderBrush="#427C3AED"
+                                  BorderThickness="1"
+                                  HorizontalAlignment="Left"
+                                  VerticalAlignment="Top">
+                            <Grid>
+                              <TextBlock Text="{Binding AvatarInitial}"
+                                         FontSize="20"
+                                         FontWeight="Bold"
+                                         Foreground="#7C3AED"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center" />
+                              <Image Source="{Binding AvatarImage}"
+                                     Stretch="UniformToFill"
+                                     Width="54"
+                                     Height="54" />
+                            </Grid>
+                          </Border>
+
+                          <Border MinWidth="29"
+                                  Height="17"
+                                  Padding="5,1"
+                                  CornerRadius="5"
+                                  Background="#FFFF5F78"
+                                  BorderBrush="#FFFFFFFF"
+                                  BorderThickness="1"
+                                  HorizontalAlignment="Right"
+                                  VerticalAlignment="Bottom"
+                                  IsVisible="{Binding IsLive}">
+                            <TextBlock Text="Live"
+                                       FontSize="9"
                                        FontWeight="Bold"
-                                       Foreground="#7C3AED"
+                                       Foreground="White"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center" />
-                            <Image Source="{Binding AvatarImage}"
-                                   Stretch="UniformToFill"
-                                   Width="54"
-                                   Height="54" />
-                          </Grid>
-                        </Border>
+                          </Border>
+                        </Grid>
 
                         <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                           <TextBlock Text="{Binding DisplayName}"
@@ -551,38 +574,6 @@
                                         HorizontalAlignment="Right" />
                         </StackPanel>
                       </Grid>
-
-                      <Border Background="#0C7C3AED"
-                              CornerRadius="9"
-                              Padding="10,8">
-                        <StackPanel Spacing="4">
-                          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="7">
-                            <TextBlock Text="{Binding StateIcon}"
-                                       FontSize="16"
-                                       Foreground="#10B981"
-                                       VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding StateText}"
-                                       FontWeight="SemiBold"
-                                       VerticalAlignment="Center" />
-                            <Border Grid.Column="2"
-                                    Padding="7,2"
-                                    CornerRadius="7"
-                                    Background="#1606B6D4"
-                                    IsVisible="{Binding HasStreamUrl}">
-                              <TextBlock Text="{Binding StreamFormat}"
-                                         FontSize="10"
-                                         FontWeight="SemiBold"
-                                         Foreground="#0891B2" />
-                            </Border>
-                          </Grid>
-                          <TextBlock Classes="caption"
-                                     Text="{Binding StatusMessage}"
-                                     TextWrapping="Wrap" />
-                          <TextBlock Classes="caption"
-                                     Text="{Binding LastCheckedText}" />
-                        </StackPanel>
-                      </Border>
 
                       <Border Background="#1210B981"
                               BorderBrush="#3010B981"
