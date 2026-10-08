@@ -567,9 +567,10 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
         target.DisplayName = newName;
         target.UseCustomDisplayName = true;
-        target.AvatarUrl = string.IsNullOrWhiteSpace(newAvatarUrl)
-            ? null
-            : newAvatarUrl;
+        target.UseCustomAvatar = !string.IsNullOrWhiteSpace(newAvatarUrl);
+        target.AvatarUrl = target.UseCustomAvatar
+            ? newAvatarUrl
+            : null;
 
         if (avatarChanged)
         {
