@@ -728,6 +728,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             if (e.PropertyName == nameof(LiveMonitorTarget.IsEnabled)
                 && !target.IsEnabled)
             {
+                _lastConfirmedLiveStates.Remove(target.Id);
                 _ = _coordinator.StopRecordingAsync(target.Id);
             }
 
@@ -866,6 +867,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
         await _coordinator.StopRecordingAsync(target.Id);
         _loadedAvatarUrls.Remove(target.Id);
+        _lastConfirmedLiveStates.Remove(target.Id);
         target.PropertyChanged -= Target_PropertyChanged;
         Monitors.Remove(target);
         await SaveMonitorsAsync();
