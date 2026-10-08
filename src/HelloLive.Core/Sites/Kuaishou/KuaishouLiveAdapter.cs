@@ -352,7 +352,10 @@ public sealed class KuaishouLiveAdapter : ILivePlatformAdapter
         try
         {
             using var document = JsonDocument.Parse(responseBody);
-            return TryFindAuthorId(document.RootElement, out authorId);
+            return TryFindAuthorId(
+                document.RootElement,
+                IsGraphQlResponse(responseUrl),
+                out authorId);
         }
         catch (JsonException)
         {
@@ -360,34 +363,63 @@ public sealed class KuaishouLiveAdapter : ILivePlatformAdapter
         }
     }
 
-    private static bool TryFindAuthorId(JsonElement element, out string authorId)
+    private static bool TryFindAuthorId(
+        JsonElement element,
+        bool profileContainersOnly,
+        out string authorId)
     {
         authorId = string.Empty;
 
         if (element.ValueKind == JsonValueKind.Object)
         {
+            // Profile-page GraphQL responses can also contain recommended authors.
+            // Prefer profile-specific containers first and, for GraphQL, never treat
+            // an arbitrary feed item's generic "author"/"user" as the monitored user.
             foreach (var property in element.EnumerateObject())
             {
                 if (property.Value.ValueKind == JsonValueKind.Object
-                    && IsAuthorContainerName(property.Name)
+                    && IsPreferredProfileContainerName(property.Name)
                     && TryReadAuthorId(property.Value, out authorId))
                 {
                     return true;
                 }
             }
 
+            if (!profileContainersOnly)
+            {
+                foreach (var property in element.EnumerateObject())
+                {
+                    if (property.Value.ValueKind == JsonValueKind.Object
+                        && IsAuthorContainerName(property.Name)
+                        && TryReadAuthorId(property.Value, out authorId))
+                    {
+                        return true;
+                    }
+                }
+            }
+
             foreach (var property in element.EnumerateObject())
             {
-                if (TryFindAuthorId(property.Value, out authorId))
+                if (TryFindAuthorId(
+                        property.Value,
+                        profileContainersOnly,
+                        out authorId))
+                {
                     return true;
+                }
             }
         }
         else if (element.ValueKind == JsonValueKind.Array)
         {
             foreach (var item in element.EnumerateArray())
             {
-                if (TryFindAuthorId(item, out authorId))
+                if (TryFindAuthorId(
+                        item,
+                        profileContainersOnly,
+                        out authorId))
+                {
                     return true;
+                }
             }
         }
 
@@ -405,6 +437,14 @@ public sealed class KuaishouLiveAdapter : ILivePlatformAdapter
            || name.Equals("profileInfo", StringComparison.OrdinalIgnoreCase)
            || name.Equals("visionProfile", StringComparison.OrdinalIgnoreCase)
            || name.Equals("owner", StringComparison.OrdinalIgnoreCase)
+           || name.Equals("profile", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsPreferredProfileContainerName(string name)
+        => name.Equals("sensitiveUserInfo", StringComparison.OrdinalIgnoreCase)
+           || name.Equals("userProfile", StringComparison.OrdinalIgnoreCase)
+           || name.Equals("profileUser", StringComparison.OrdinalIgnoreCase)
+           || name.Equals("profileInfo", StringComparison.OrdinalIgnoreCase)
+           || name.Equals("visionProfile", StringComparison.OrdinalIgnoreCase)
            || name.Equals("profile", StringComparison.OrdinalIgnoreCase);
 
     private static bool TryReadAuthorId(JsonElement author, out string authorId)
@@ -480,7 +520,10 @@ public sealed class KuaishouLiveAdapter : ILivePlatformAdapter
         try
         {
             using var document = JsonDocument.Parse(responseBody);
-            return TryFindAuthorName(document.RootElement, out authorName);
+            return TryFindAuthorName(
+                document.RootElement,
+                IsGraphQlResponse(responseUrl),
+                out authorName);
         }
         catch (JsonException)
         {
@@ -488,7 +531,10 @@ public sealed class KuaishouLiveAdapter : ILivePlatformAdapter
         }
     }
 
-    private static bool TryFindAuthorName(JsonElement element, out string authorName)
+    private static bool TryFindAuthorName(
+        JsonElement element,
+        bool profileContainersOnly,
+        out string authorName)
     {
         authorName = string.Empty;
 
@@ -497,25 +543,48 @@ public sealed class KuaishouLiveAdapter : ILivePlatformAdapter
             foreach (var property in element.EnumerateObject())
             {
                 if (property.Value.ValueKind == JsonValueKind.Object
-                    && IsAuthorContainerName(property.Name)
+                    && IsPreferredProfileContainerName(property.Name)
                     && TryReadAuthorName(property.Value, out authorName))
                 {
                     return true;
                 }
             }
 
+            if (!profileContainersOnly)
+            {
+                foreach (var property in element.EnumerateObject())
+                {
+                    if (property.Value.ValueKind == JsonValueKind.Object
+                        && IsAuthorContainerName(property.Name)
+                        && TryReadAuthorName(property.Value, out authorName))
+                    {
+                        return true;
+                    }
+                }
+            }
+
             foreach (var property in element.EnumerateObject())
             {
-                if (TryFindAuthorName(property.Value, out authorName))
+                if (TryFindAuthorName(
+                        property.Value,
+                        profileContainersOnly,
+                        out authorName))
+                {
                     return true;
+                }
             }
         }
         else if (element.ValueKind == JsonValueKind.Array)
         {
             foreach (var item in element.EnumerateArray())
             {
-                if (TryFindAuthorName(item, out authorName))
+                if (TryFindAuthorName(
+                        item,
+                        profileContainersOnly,
+                        out authorName))
+                {
                     return true;
+                }
             }
         }
 
@@ -550,6 +619,17 @@ public sealed class KuaishouLiveAdapter : ILivePlatformAdapter
         return false;
     }
 
+    private static bool IsGraphQlResponse(string responseUrl)
+    {
+        if (!Uri.TryCreate(responseUrl, UriKind.Absolute, out var uri))
+            return false;
+
+        var path = uri.AbsolutePath.TrimEnd('/');
+        return path.Equals("/graphql", StringComparison.OrdinalIgnoreCase)
+               || path.EndsWith("/m_graphql", StringComparison.OrdinalIgnoreCase)
+               || path.Contains("/graphql/", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool IsAuthorMetadataResponse(string responseUrl)
     {
         if (!Uri.TryCreate(responseUrl, UriKind.Absolute, out var uri))
@@ -564,9 +644,7 @@ public sealed class KuaishouLiveAdapter : ILivePlatformAdapter
         }
 
         var path = uri.AbsolutePath.TrimEnd('/');
-        var isGraphQl = path.Equals("/graphql", StringComparison.OrdinalIgnoreCase)
-                        || path.EndsWith("/m_graphql", StringComparison.OrdinalIgnoreCase)
-                        || path.Contains("/graphql/", StringComparison.OrdinalIgnoreCase);
+        var isGraphQl = IsGraphQlResponse(responseUrl);
 
         return path.Equals("/live_api/profile/public", StringComparison.OrdinalIgnoreCase)
                || path.Equals("/rest/v/profile/feed", StringComparison.OrdinalIgnoreCase)
@@ -596,7 +674,10 @@ public sealed class KuaishouLiveAdapter : ILivePlatformAdapter
         try
         {
             using var document = JsonDocument.Parse(responseBody);
-            return TryFindAuthorAvatar(document.RootElement, out avatarUrl);
+            return TryFindAuthorAvatar(
+                document.RootElement,
+                IsGraphQlResponse(responseUrl),
+                out avatarUrl);
         }
         catch (JsonException)
         {
@@ -604,7 +685,10 @@ public sealed class KuaishouLiveAdapter : ILivePlatformAdapter
         }
     }
 
-    private static bool TryFindAuthorAvatar(JsonElement element, out string avatarUrl)
+    private static bool TryFindAuthorAvatar(
+        JsonElement element,
+        bool profileContainersOnly,
+        out string avatarUrl)
     {
         avatarUrl = string.Empty;
 
@@ -613,25 +697,48 @@ public sealed class KuaishouLiveAdapter : ILivePlatformAdapter
             foreach (var property in element.EnumerateObject())
             {
                 if (property.Value.ValueKind == JsonValueKind.Object
-                    && IsAuthorContainerName(property.Name)
+                    && IsPreferredProfileContainerName(property.Name)
                     && TryReadAuthorAvatar(property.Value, out avatarUrl))
                 {
                     return true;
                 }
             }
 
+            if (!profileContainersOnly)
+            {
+                foreach (var property in element.EnumerateObject())
+                {
+                    if (property.Value.ValueKind == JsonValueKind.Object
+                        && IsAuthorContainerName(property.Name)
+                        && TryReadAuthorAvatar(property.Value, out avatarUrl))
+                    {
+                        return true;
+                    }
+                }
+            }
+
             foreach (var property in element.EnumerateObject())
             {
-                if (TryFindAuthorAvatar(property.Value, out avatarUrl))
+                if (TryFindAuthorAvatar(
+                        property.Value,
+                        profileContainersOnly,
+                        out avatarUrl))
+                {
                     return true;
+                }
             }
         }
         else if (element.ValueKind == JsonValueKind.Array)
         {
             foreach (var item in element.EnumerateArray())
             {
-                if (TryFindAuthorAvatar(item, out avatarUrl))
+                if (TryFindAuthorAvatar(
+                        item,
+                        profileContainersOnly,
+                        out avatarUrl))
+                {
                     return true;
+                }
             }
         }
 
