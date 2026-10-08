@@ -418,7 +418,7 @@
               <Grid RowDefinitions="Auto,*">
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Text="运行日志" FontSize="18" FontWeight="SemiBold" />
-                  <TextBlock Grid.Column="1" Classes="caption" Text="最多保留 500 条" />
+                  <TextBlock Grid.Column="1" Classes="caption" Text="最新在上 · 最多保留 500 条" />
                 </Grid>
                 <ScrollViewer Grid.Row="1"
                               Margin="0,12,-18,0"
