@@ -359,7 +359,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             ? $"未发现 Chromium，可点击安装。安装目录：{_browser.PreferredChromiumInstallDirectory}"
             : $"Chromium：{path}";
 
-        AddLog($"已加载 {Monitors.Count} 个监控对象。监控探测固定使用无头 Chromium，当前最大并发页面数：{MaxConcurrentPages}。");
+        AddLog($"已加载 {Monitors.Count} 个监控对象。后台轮询与单项检查固定使用无头 Chromium，当前最大并发页面数：{MaxConcurrentPages}。");
 
         if (AutoStartMonitoring && Monitors.Any(x => x.IsEnabled))
             await StartMonitoringAsync();
@@ -416,7 +416,12 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         await SaveMonitorsAsync();
         RefreshCoordinatorState();
         RaiseMetricsChanged();
-        AddLog($"已添加监控：{target.DisplayName}（{adapter.DisplayName}）。");
+        AddLog($"已添加监控：{target.DisplayName}（{adapter.DisplayName}），正在立即进行无头检查。");
+
+        // Newly-added monitors should resolve nickname/avatar/live state right away.
+        // LiveMonitorCoordinator.CheckOneAsync is deliberately forced to headless,
+        // so this never depends on the manual browser-mode switch.
+        await _coordinator.CheckOneAsync(target.Id);
     }
 
     public async Task<string?> UpdateMonitorUrlAsync(
