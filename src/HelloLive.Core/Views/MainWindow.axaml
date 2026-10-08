@@ -285,6 +285,35 @@
 
               <Border Classes="card">
                 <StackPanel Spacing="10">
+                  <TextBlock Text="FFmpeg" FontSize="18" FontWeight="SemiBold" />
+                  <TextBlock Classes="caption"
+                             Text="HLS 直播录制需要 FFmpeg。点击后会在后台从 gyan.dev 下载 Windows release essentials，并安装到 EXE 同级的 ffmpeg\bin 目录；安装完成无需重启。HTTP-FLV 录制不依赖 FFmpeg。"
+                             TextWrapping="Wrap" />
+                  <Button Content="{Binding InstallFfmpegButtonText}"
+                          Command="{Binding InstallFfmpegCommand}"
+                          MinHeight="38"
+                          HorizontalAlignment="Stretch"
+                          HorizontalContentAlignment="Center"
+                          IsVisible="{Binding IsFfmpegAutoInstallSupported}" />
+                  <StackPanel IsVisible="{Binding IsFfmpegInstallProgressVisible}"
+                              Spacing="4">
+                    <ProgressBar Minimum="0"
+                                 Maximum="100"
+                                 Height="8"
+                                 IsIndeterminate="{Binding IsFfmpegInstallProgressIndeterminate}"
+                                 Value="{Binding FfmpegInstallProgressPercent}" />
+                    <TextBlock Classes="caption"
+                               Text="{Binding FfmpegInstallProgressText}"
+                               TextWrapping="Wrap" />
+                  </StackPanel>
+                  <TextBlock Classes="caption"
+                             Text="{Binding FfmpegStatusText}"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+              </Border>
+
+              <Border Classes="card">
+                <StackPanel Spacing="10">
                   <TextBlock Text="监控策略" FontSize="18" FontWeight="SemiBold" />
                   <Grid ColumnDefinitions="*,120" ColumnSpacing="12">
                     <StackPanel>
@@ -486,7 +515,7 @@
                 Margin="0,0,8,0"
                 Classes="card"
                 IsVisible="{Binding IsMonitorPanelVisible}">
-          <Grid RowDefinitions="Auto,Auto,*">
+          <Grid RowDefinitions="Auto,*">
             <StackPanel>
               <TextBlock Text="监控列表" FontSize="19" FontWeight="SemiBold" />
               <TextBlock Classes="caption"
@@ -495,13 +524,7 @@
                          TextWrapping="Wrap" />
             </StackPanel>
 
-            <Border Grid.Row="1" Background="#1FFFFFFF" CornerRadius="7" Padding="10,8" Margin="0,12,0,10">
-              <TextBlock Classes="caption"
-                         Text="流地址通常带时效签名。HelloLive 只读取普通公开页面正常产生的网络请求，不绕过登录、验证码或私密访问控制。"
-                         TextWrapping="Wrap" />
-            </Border>
-
-            <ListBox Grid.Row="2"
+            <ListBox Grid.Row="1"
                      Margin="0,0,-18,0"
                      Classes="monitorList"
                      ItemsSource="{Binding Monitors}"
@@ -530,9 +553,9 @@
                         <MenuItem Header="打开主页"
                                   Tag="{Binding}"
                                   Click="OpenProfileButton_Click" />
-                        <MenuItem Header="修改 URL"
+                        <MenuItem Header="修改作者信息"
                                   Tag="{Binding}"
-                                  Click="EditMonitorUrlButton_Click" />
+                                  Click="EditAuthorInfoButton_Click" />
                         <Separator />
                         <MenuItem Header="移除监控"
                                   Tag="{Binding}"
@@ -650,13 +673,13 @@
         </Border>
       </Grid>
 
-      <!-- 修改监控 URL：使用与主窗口一致的卡片、颜色和按钮风格。 -->
+      <!-- 修改作者信息：昵称、头像 URL 和监控 URL 使用同一风格弹窗集中编辑。 -->
       <Grid x:Name="EditUrlOverlay"
             Grid.RowSpan="2"
             Background="#99000000"
             IsVisible="False"
             Panel.ZIndex="3000">
-        <Border Width="570"
+        <Border Width="590"
                 Padding="24"
                 CornerRadius="12"
                 Background="{DynamicResource CardColor}"
@@ -664,25 +687,48 @@
                 BorderThickness="1"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center">
-          <StackPanel Spacing="16">
-            <StackPanel Spacing="6">
-              <TextBlock Text="修改监控 URL"
+          <StackPanel Spacing="14">
+            <StackPanel Spacing="5">
+              <TextBlock Text="修改作者信息"
                          FontSize="21"
                          FontWeight="SemiBold" />
               <TextBlock x:Name="EditUrlTargetText"
                          Classes="caption"
                          TextWrapping="Wrap" />
-              <TextBlock Text="修改后会停止该条目的当前录像，清除旧作者身份与头像，并立即重新检查新地址。"
+              <TextBlock Text="昵称和头像可直接修改；监控 URL 改变时会停止该作者当前录像，并立即重新检查新地址。"
                          Classes="caption"
                          TextWrapping="Wrap" />
             </StackPanel>
 
-            <TextBox x:Name="EditUrlTextBox"
-                     MinHeight="44"
-                     Padding="12,0"
-                     VerticalContentAlignment="Center"
-                     Watermark="https://live.kuaishou.com/profile/..."
-                     KeyDown="EditUrlTextBox_KeyDown" />
+            <StackPanel Spacing="5">
+              <TextBlock Text="作者昵称" FontWeight="Medium" />
+              <TextBox x:Name="EditAuthorNameTextBox"
+                       MinHeight="42"
+                       Padding="12,0"
+                       VerticalContentAlignment="Center"
+                       Watermark="作者昵称"
+                       KeyDown="EditUrlTextBox_KeyDown" />
+            </StackPanel>
+
+            <StackPanel Spacing="5">
+              <TextBlock Text="头像 URL" FontWeight="Medium" />
+              <TextBox x:Name="EditAvatarUrlTextBox"
+                       MinHeight="42"
+                       Padding="12,0"
+                       VerticalContentAlignment="Center"
+                       Watermark="https://..."
+                       KeyDown="EditUrlTextBox_KeyDown" />
+            </StackPanel>
+
+            <StackPanel Spacing="5">
+              <TextBlock Text="监控 URL" FontWeight="Medium" />
+              <TextBox x:Name="EditUrlTextBox"
+                       MinHeight="42"
+                       Padding="12,0"
+                       VerticalContentAlignment="Center"
+                       Watermark="https://live.kuaishou.com/profile/..."
+                       KeyDown="EditUrlTextBox_KeyDown" />
+            </StackPanel>
 
             <TextBlock x:Name="EditUrlErrorText"
                        Foreground="#EF4444"
@@ -697,7 +743,7 @@
                       Click="EditUrlCancelButton_Click" />
               <Button Grid.Column="1"
                       Classes="primary"
-                      Content="保存并检查"
+                      Content="保存"
                       MinHeight="40"
                       HorizontalAlignment="Stretch"
                       HorizontalContentAlignment="Center"
