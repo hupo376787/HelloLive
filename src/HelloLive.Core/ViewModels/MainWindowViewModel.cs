@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using HelloLive.Core.Contracts;
 using HelloLive.Core.Models;
 using HelloLive.Core.Services.Browser;
+using HelloLive.Core.Services.FFmpeg;
 using HelloLive.Core.Services.Images;
 using HelloLive.Core.Services.Monitoring;
 using HelloLive.Core.Services.Notifications;
@@ -20,6 +21,7 @@ namespace HelloLive.Core.ViewModels;
 public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 {
     private readonly ILiveBrowserService _browser;
+    private readonly IFfmpegInstallerService _ffmpegInstaller;
     private readonly LivePlatformRegistry _platforms;
     private readonly LiveMonitorCoordinator _coordinator;
     private readonly SettingsService _settingsService;
@@ -49,6 +51,12 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private bool _isChromiumInstallProgressIndeterminate;
     private double _chromiumInstallProgressPercent;
     private string _chromiumInstallProgressText = string.Empty;
+    private bool _isFfmpegInstalling;
+    private bool _isFfmpegInstallProgressVisible;
+    private bool _isFfmpegInstallProgressIndeterminate;
+    private double _ffmpegInstallProgressPercent;
+    private string _ffmpegInstallProgressText = string.Empty;
+    private string _ffmpegStatusText = "尚未检查 FFmpeg";
     private string _themeIcon = "☾";
     private bool _remoteApiEnabled;
     private int _remoteApiPort;
@@ -58,12 +66,14 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
     public MainWindowViewModel(
         ILiveBrowserService browser,
+        IFfmpegInstallerService ffmpegInstaller,
         LivePlatformRegistry platforms,
         LiveMonitorCoordinator coordinator,
         SettingsService settingsService,
         MonitorStore monitorStore)
     {
         _browser = browser;
+        _ffmpegInstaller = ffmpegInstaller;
         _platforms = platforms;
         _coordinator = coordinator;
         _settingsService = settingsService;
@@ -89,6 +99,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         StopMonitoringCommand = new AsyncRelayCommand(StopMonitoringAsync);
         CheckAllCommand = new AsyncRelayCommand(CheckAllAsync);
         InstallChromiumCommand = new AsyncRelayCommand(InstallChromiumAsync, () => !IsChromiumInstalling);
+        InstallFfmpegCommand = new AsyncRelayCommand(InstallFfmpegAsync, () => !IsFfmpegInstalling && IsFfmpegAutoInstallSupported);
         CheckTargetCommand = new AsyncRelayCommand<LiveMonitorTarget>(CheckTargetAsync);
         RemoveMonitorCommand = new AsyncRelayCommand<LiveMonitorTarget>(RemoveMonitorAsync);
         ToggleThemeCommand = new RelayCommand(ToggleTheme);
@@ -119,6 +130,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     public IAsyncRelayCommand StopMonitoringCommand { get; }
     public IAsyncRelayCommand CheckAllCommand { get; }
     public IAsyncRelayCommand InstallChromiumCommand { get; }
+    public IAsyncRelayCommand InstallFfmpegCommand { get; }
     public IAsyncRelayCommand<LiveMonitorTarget> CheckTargetCommand { get; }
     public IAsyncRelayCommand<LiveMonitorTarget> RemoveMonitorCommand { get; }
     public IRelayCommand ToggleThemeCommand { get; }
@@ -299,6 +311,56 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         private set => SetProperty(ref _chromiumInstallProgressText, value);
     }
 
+    public bool IsFfmpegInstalling
+    {
+        get => _isFfmpegInstalling;
+        private set
+        {
+            if (!SetProperty(ref _isFfmpegInstalling, value))
+                return;
+            OnPropertyChanged(nameof(InstallFfmpegButtonText));
+            InstallFfmpegCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    public bool IsFfmpegInstallProgressVisible
+    {
+        get => _isFfmpegInstallProgressVisible;
+        private set => SetProperty(ref _isFfmpegInstallProgressVisible, value);
+    }
+
+    public bool IsFfmpegInstallProgressIndeterminate
+    {
+        get => _isFfmpegInstallProgressIndeterminate;
+        private set => SetProperty(ref _isFfmpegInstallProgressIndeterminate, value);
+    }
+
+    public double FfmpegInstallProgressPercent
+    {
+        get => _ffmpegInstallProgressPercent;
+        private set => SetProperty(ref _ffmpegInstallProgressPercent, value);
+    }
+
+    public string FfmpegInstallProgressText
+    {
+        get => _ffmpegInstallProgressText;
+        private set => SetProperty(ref _ffmpegInstallProgressText, value);
+    }
+
+    public string FfmpegStatusText
+    {
+        get => _ffmpegStatusText;
+        private set => SetProperty(ref _ffmpegStatusText, value);
+    }
+
+    public bool IsFfmpegAutoInstallSupported => _ffmpegInstaller.IsSupported;
+
+    public string InstallFfmpegButtonText => IsFfmpegInstalling
+        ? "正在下载 FFmpeg…"
+        : _ffmpegInstaller.IsInstalled
+            ? "重新下载 FFmpeg"
+            : "下载 FFmpeg";
+
     public string ThemeIcon
     {
         get => _themeIcon;
@@ -358,6 +420,8 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         BrowserStatusText = string.IsNullOrWhiteSpace(path)
             ? $"未发现 Chromium，可点击安装。安装目录：{_browser.PreferredChromiumInstallDirectory}"
             : $"Chromium：{path}";
+
+        RefreshFfmpegStatus();
 
         AddLog($"已加载 {Monitors.Count} 个监控对象。后台轮询与单项检查固定使用无头 Chromium，当前最大并发页面数：{MaxConcurrentPages}。");
 
@@ -424,19 +488,34 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         await _coordinator.CheckOneAsync(target.Id);
     }
 
-    public async Task<string?> UpdateMonitorUrlAsync(
+    public async Task<string?> UpdateMonitorAuthorInfoAsync(
         LiveMonitorTarget target,
-        string newUrl)
+        string displayName,
+        string avatarUrl,
+        string monitorUrl)
     {
         ArgumentNullException.ThrowIfNull(target);
 
-        var input = (newUrl ?? string.Empty).Trim();
+        var newName = (displayName ?? string.Empty).Trim();
+        var newAvatarUrl = (avatarUrl ?? string.Empty).Trim();
+        var input = (monitorUrl ?? string.Empty).Trim();
+
+        if (string.IsNullOrWhiteSpace(newName))
+            return "作者昵称不能为空。";
+
+        if (!string.IsNullOrWhiteSpace(newAvatarUrl)
+            && (!Uri.TryCreate(newAvatarUrl, UriKind.Absolute, out var avatarUri)
+                || avatarUri.Scheme is not ("http" or "https")))
+        {
+            return "头像 URL 必须是有效的 http/https 地址，或留空。";
+        }
+
         if (string.IsNullOrWhiteSpace(input))
-            return "请输入作者主页或直播分享地址。";
+            return "请输入监控 URL。";
 
         var adapter = _platforms.ResolveByInput(input, out var extractedUrl);
         if (adapter is null)
-            return "未能从输入内容中识别受支持的作者主页或分享链接。";
+            return "未能从监控 URL 中识别受支持的平台地址。";
 
         string normalizedUrl;
         try
@@ -445,56 +524,66 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            return $"解析分享链接失败：{ex.Message}";
+            return $"解析监控 URL 失败：{ex.Message}";
         }
+
         if (Monitors.Any(x => !ReferenceEquals(x, target)
                               && string.Equals(
                                   x.ProfileUrl,
                                   normalizedUrl,
                                   StringComparison.OrdinalIgnoreCase)))
         {
-            return "该地址已经在监控列表中。";
+            return "该监控 URL 已经在列表中。";
         }
 
-        if (string.Equals(
-                target.ProfileUrl,
-                normalizedUrl,
-                StringComparison.OrdinalIgnoreCase))
+        var urlChanged = !string.Equals(
+            target.ProfileUrl,
+            normalizedUrl,
+            StringComparison.OrdinalIgnoreCase);
+        var avatarChanged = !string.Equals(
+            target.AvatarUrl ?? string.Empty,
+            newAvatarUrl,
+            StringComparison.Ordinal);
+
+        if (urlChanged)
         {
-            return null;
+            await _coordinator.StopRecordingAsync(target.Id);
+            _loadedAvatarUrls.Remove(target.Id);
+            _lastConfirmedLiveStates.Remove(target.Id);
+
+            target.PlatformId = adapter.Id;
+            target.ProfileUrl = normalizedUrl;
+            target.AuthorId = LiveAuthorIdentityHelper.ExtractStableAuthorId(normalizedUrl);
+            target.State = LiveMonitorState.Idle;
+            target.StatusMessage = "作者信息已修改，等待重新检查";
+            target.LastCheckedAt = null;
+            target.StreamUrl = null;
+            target.StreamFormat = null;
+            target.ResolvedPageUrl = null;
+            target.IsRecording = false;
+            target.RecordingFilePath = null;
+            target.RecordingStatus = string.Empty;
         }
 
-        // URL 指向的作者可能已经改变。先停止旧作者录像，再清理旧作者的
-        // 运行态身份/头像/流信息，避免界面和录像目录继续沿用旧数据。
-        await _coordinator.StopRecordingAsync(target.Id);
-        _loadedAvatarUrls.Remove(target.Id);
-        _lastConfirmedLiveStates.Remove(target.Id);
+        target.DisplayName = newName;
+        target.UseCustomDisplayName = true;
+        target.AvatarUrl = string.IsNullOrWhiteSpace(newAvatarUrl)
+            ? null
+            : newAvatarUrl;
 
-        target.PlatformId = adapter.Id;
-        target.ProfileUrl = normalizedUrl;
-        target.AuthorId = LiveAuthorIdentityHelper.ExtractStableAuthorId(normalizedUrl);
-        target.AvatarUrl = null;
-        target.AvatarImage = null;
-        target.State = LiveMonitorState.Idle;
-        target.StatusMessage = "URL 已修改，等待重新检查";
-        target.LastCheckedAt = null;
-        target.StreamUrl = null;
-        target.StreamFormat = null;
-        target.ResolvedPageUrl = null;
-        target.IsRecording = false;
-        target.RecordingFilePath = null;
-        target.RecordingStatus = string.Empty;
-
-        if (!target.UseCustomDisplayName)
-            target.DisplayName = BuildDefaultName(normalizedUrl, adapter.DisplayName);
+        if (avatarChanged)
+        {
+            _loadedAvatarUrls.Remove(target.Id);
+            target.AvatarImage = null;
+            _ = LoadMonitorAvatarAsync(target);
+        }
 
         await SaveMonitorsAsync();
         RefreshCoordinatorState();
         RaiseMetricsChanged();
-        AddLog($"已修改监控 URL：{target.DisplayName} → {normalizedUrl}");
+        AddLog($"已修改作者信息：{target.DisplayName}。");
 
-        // 修改 URL 后立即重新探测一次，尽快刷新昵称、作者 ID 和头像。
-        if (target.IsEnabled)
+        if (urlChanged && target.IsEnabled)
             await _coordinator.CheckOneAsync(target.Id);
 
         return null;
@@ -582,6 +671,84 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             IsChromiumInstalling = false;
             IsChromiumInstallProgressIndeterminate = false;
         }
+    }
+
+    private async Task InstallFfmpegAsync()
+    {
+        if (IsFfmpegInstalling || !IsFfmpegAutoInstallSupported)
+            return;
+
+        IsFfmpegInstalling = true;
+        IsFfmpegInstallProgressVisible = true;
+        IsFfmpegInstallProgressIndeterminate = true;
+        FfmpegInstallProgressPercent = 0;
+        FfmpegInstallProgressText = "准备下载 FFmpeg…";
+        AddLog($"开始下载 FFmpeg，安装目录：{_ffmpegInstaller.InstallDirectory}");
+
+        try
+        {
+            var progress = new Progress<FfmpegInstallProgress>(value =>
+            {
+                IsFfmpegInstallProgressIndeterminate = value.Percentage is null;
+                FfmpegInstallProgressPercent = value.Percentage ?? 0;
+
+                var sizeText = value.TotalBytes is > 0
+                    ? $" · {FormatBytes(value.BytesReceived)} / {FormatBytes(value.TotalBytes.Value)}"
+                    : value.BytesReceived > 0
+                        ? $" · {FormatBytes(value.BytesReceived)}"
+                        : string.Empty;
+                var speedText = value.BytesPerSecond > 0
+                    ? $" · {FormatBytes((long)value.BytesPerSecond)}/s"
+                    : string.Empty;
+
+                FfmpegInstallProgressText =
+                    value.Percentage is { } percentage
+                        ? $"{value.Message} {percentage}%{sizeText}{speedText}"
+                        : $"{value.Message}{sizeText}{speedText}";
+            });
+
+            var result = await _ffmpegInstaller.InstallAsync(progress);
+            FfmpegStatusText = $"FFmpeg 已可用：{Path.GetDirectoryName(result.FfmpegPath)}";
+            FfmpegInstallProgressText = "FFmpeg 安装完成，无需重启 HelloLive。";
+            FfmpegInstallProgressPercent = 100;
+            AddLog($"FFmpeg 安装完成：{result.FfmpegPath}");
+        }
+        catch (Exception ex)
+        {
+            FfmpegStatusText = "FFmpeg 下载或安装失败";
+            FfmpegInstallProgressText = ex.Message;
+            AddLog($"FFmpeg 下载或安装失败：{ex.Message}");
+        }
+        finally
+        {
+            IsFfmpegInstalling = false;
+            IsFfmpegInstallProgressIndeterminate = false;
+            RefreshFfmpegStatus();
+        }
+    }
+
+    private void RefreshFfmpegStatus()
+    {
+        var info = _ffmpegInstaller.GetToolInfo();
+        FfmpegStatusText = info.IsFound && !string.IsNullOrWhiteSpace(info.FfmpegPath)
+            ? $"FFmpeg 已可用：{Path.GetDirectoryName(info.FfmpegPath)}"
+            : IsFfmpegAutoInstallSupported
+                ? $"尚未检测到 FFmpeg。可下载到：{Path.Combine(_ffmpegInstaller.InstallDirectory, "bin")}"
+                : "当前系统不支持程序内自动下载 FFmpeg，请通过系统包管理器安装。";
+
+        OnPropertyChanged(nameof(InstallFfmpegButtonText));
+        InstallFfmpegCommand.NotifyCanExecuteChanged();
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes >= 1024L * 1024 * 1024)
+            return $"{bytes / (1024d * 1024 * 1024):0.00} GB";
+        if (bytes >= 1024L * 1024)
+            return $"{bytes / (1024d * 1024):0.0} MB";
+        if (bytes >= 1024L)
+            return $"{bytes / 1024d:0.0} KB";
+        return $"{bytes} B";
     }
 
     private void Coordinator_CheckResultChanged(LiveCheckResult result)
@@ -1033,6 +1200,8 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         await _settingsService.SaveAsync(_settings);
         await SaveMonitorsAsync();
         _pushPlusNotification.Dispose();
+        if (_ffmpegInstaller is IDisposable ffmpegDisposable)
+            ffmpegDisposable.Dispose();
         _imageCache.Dispose();
         _saveGate.Dispose();
     }
