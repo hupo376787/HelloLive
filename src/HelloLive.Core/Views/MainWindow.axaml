@@ -237,12 +237,19 @@
               <Border Classes="card">
                 <StackPanel Spacing="10">
                   <TextBlock Text="浏览器" FontSize="18" FontWeight="SemiBold" />
-                  <StackPanel Spacing="2">
-                    <TextBlock Text="监控探测：无头模式" FontWeight="Medium" />
-                    <TextBlock Classes="caption"
-                               Text="监控列表中的作者始终使用后台 Chromium 探测，不显示浏览器窗口；轮询和“立即检查”都不会弹出 Chrome。"
-                               TextWrapping="Wrap" />
-                  </StackPanel>
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="手动检查：无头浏览" FontWeight="Medium" />
+                      <TextBlock Classes="caption"
+                                 Text="仅影响“立即检查全部”和监控项“立即检查”。关闭后会显示 Chromium 便于人工查看；后台轮询始终强制无头，不受此开关影响。右键“打开主页”始终使用正常浏览器。"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1"
+                                  IsChecked="{Binding HeadlessMode, Mode=TwoWay}"
+                                  OnContent="开"
+                                  OffContent="关"
+                                  VerticalAlignment="Center" />
+                  </Grid>
                   <CheckBox Content="阻止图片和字体，降低页面资源占用"
                             IsChecked="{Binding BlockImagesAndFonts, Mode=TwoWay}" />
                   <Button Content="安装 / 更新 Chromium"
@@ -273,8 +280,8 @@
                   </Grid>
                   <Grid ColumnDefinitions="*,120" ColumnSpacing="12">
                     <StackPanel>
-                      <TextBlock Text="轮询间隔（秒）" FontWeight="Medium" />
-                      <TextBlock Classes="caption" Text="每轮完成后等待再检查。" />
+                      <TextBlock Text="后台轮询时间（秒）" FontWeight="Medium" />
+                      <TextBlock Classes="caption" Text="默认 300 秒；每轮完成后等待再检查，后台始终使用无头 Chromium。" />
                     </StackPanel>
                     <NumericUpDown Grid.Column="1"
                                    Minimum="10" Maximum="3600" Increment="10"
@@ -321,6 +328,20 @@
                   <TextBlock Classes="caption"
                              Text="目录结构与 HelloCrab 一致：Download / 平台 / 昵称(作者ID) / yyyy-MM-dd HH-mm-ss.flv"
                              TextWrapping="Wrap" />
+                </StackPanel>
+              </Border>
+
+              <Border Classes="card">
+                <StackPanel Spacing="10">
+                  <TextBlock Text="PushPlus 开播提醒" FontSize="18" FontWeight="SemiBold" />
+                  <TextBlock Classes="caption"
+                             Text="填写 PushPlus Token 后，当监控作者由“未直播”变为“直播中”时发送一次微信提醒；同一场直播不会因后台重复轮询而反复推送。留空表示关闭。"
+                             TextWrapping="Wrap" />
+                  <TextBox Text="{Binding PushPlusToken, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                           PlaceholderText="请输入 PushPlus Token"
+                           MaxLength="256"
+                           MinHeight="42"
+                           VerticalContentAlignment="Center" />
                 </StackPanel>
               </Border>
 
