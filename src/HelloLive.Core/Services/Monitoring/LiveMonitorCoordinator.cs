@@ -15,7 +15,7 @@ public sealed class LiveMonitorCoordinator : IAsyncDisposable
     private readonly ConcurrentDictionary<string, byte> _inFlight = new(StringComparer.Ordinal);
     private readonly object _sync = new();
     private IReadOnlyList<LiveMonitorTargetSnapshot> _targets = Array.Empty<LiveMonitorTargetSnapshot>();
-    private LiveMonitorOptions _options = new(true, 4, 60, 20, true);
+    private LiveMonitorOptions _options = new(true, 4, 300, 20, true);
     private CancellationTokenSource? _runCts;
     private Task? _runTask;
 
@@ -47,11 +47,9 @@ public sealed class LiveMonitorCoordinator : IAsyncDisposable
 
     public void SetOptions(LiveMonitorOptions options)
     {
-        // Monitor-list probing must never surface Chromium windows.
-        // Keep the Headless field in the shared options model for future explicit
-        // diagnostics, but all scheduled/manual checks of saved monitor targets
-        // are forced to headless here.
-        var normalized = options.Normalize() with { Headless = true };
+        // Headless now controls only user-triggered checks. Background polling below
+        // explicitly overrides it to true so scheduled monitoring never opens Chromium.
+        var normalized = options.Normalize();
 
         lock (_sync)
             _options = normalized;
@@ -137,14 +135,20 @@ public sealed class LiveMonitorCoordinator : IAsyncDisposable
 
     private async Task RunLoopAsync(CancellationToken cancellationToken)
     {
-        Log?.Invoke("监控列表使用无头 Chromium 按需创建临时 Page；检测到直播流后立即关闭 Page，并由独立录制连接持续保存直播。");
+        Log?.Invoke("后台轮询固定使用无头 Chromium；手动“立即检查”是否无头由左侧开关决定。检测到直播后关闭临时 Page，并由独立录制连接持续保存。");
 
         while (!cancellationToken.IsCancellationRequested)
         {
             var (targets, options) = GetSnapshot();
             var enabled = targets.Where(x => x.IsEnabled).ToArray();
             if (enabled.Length > 0)
-                await CheckBatchAsync(enabled, options, cancellationToken);
+            {
+                var backgroundOptions = options with { Headless = true };
+                await CheckBatchAsync(
+                    enabled,
+                    backgroundOptions,
+                    cancellationToken);
+            }
 
             await Task.Delay(
                 TimeSpan.FromSeconds(options.CheckIntervalSeconds),
