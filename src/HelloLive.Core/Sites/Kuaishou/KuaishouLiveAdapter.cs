@@ -1,5 +1,8 @@
 using HelloLive.Core.Models;
+using System.Net;
+using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace HelloLive.Core.Sites.Kuaishou;
 
@@ -21,6 +24,8 @@ public sealed class KuaishouLiveAdapter : ILivePlatformAdapter
         ".kwaicdn.com",
         ".kuaishou.com"
     ];
+
+    private static readonly HttpClient RedirectClient = CreateRedirectClient();
 
     public string Id => "kuaishou";
     public string DisplayName => "快手";
@@ -47,6 +52,210 @@ public sealed class KuaishouLiveAdapter : ILivePlatformAdapter
             return value;
 
         return "https://" + value.TrimStart('/');
+    }
+
+    public async Task<string> ResolveProfileUrlAsync(
+        string url,
+        CancellationToken cancellationToken = default)
+    {
+        var normalized = NormalizeProfileUrl(url);
+        if (!TryCreateUri(normalized, out var originalUri))
+            return normalized;
+
+        Uri resolvedUri = originalUri;
+        string? responseBody = null;
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, originalUri);
+            using var response = await RedirectClient.SendAsync(
+                request,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken);
+
+            resolvedUri = response.RequestMessage?.RequestUri ?? originalUri;
+
+            // Most Kuaishou share/short links resolve through ordinary HTTP redirects.
+            if (!TryExtractProfileIdentifier(resolvedUri, out _))
+            {
+                responseBody = await ReadLimitedTextAsync(
+                    response.Content,
+                    512 * 1024,
+                    cancellationToken);
+            }
+        }
+        catch (OperationCanceledException)
+            when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            // Network resolution is best-effort. Direct profile URLs can still be
+            // canonicalized locally if the profile/principal id is present in the path.
+        }
+
+        if (TryExtractProfileIdentifier(resolvedUri, out var profileId)
+            || TryExtractProfileIdentifier(originalUri, out profileId)
+            || TryExtractProfileIdentifierFromBody(responseBody, out profileId))
+        {
+            return BuildCanonicalProfileUrl(profileId);
+        }
+
+        return resolvedUri.AbsoluteUri;
+    }
+
+    private static HttpClient CreateRedirectClient()
+    {
+        var handler = new HttpClientHandler
+        {
+            AllowAutoRedirect = true,
+            MaxAutomaticRedirections = 10,
+            AutomaticDecompression = DecompressionMethods.All
+        };
+
+        var client = new HttpClient(handler)
+        {
+            Timeout = TimeSpan.FromSeconds(12)
+        };
+        client.DefaultRequestHeaders.UserAgent.ParseAdd(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
+            "AppleWebKit/537.36 (KHTML, like Gecko) " +
+            "Chrome/141.0.0.0 Safari/537.36");
+        client.DefaultRequestHeaders.Accept.ParseAdd(
+            "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8");
+        return client;
+    }
+
+    private static string BuildCanonicalProfileUrl(string profileId)
+        => $"https://live.kuaishou.com/profile/{Uri.EscapeDataString(profileId.Trim())}";
+
+    private static bool TryExtractProfileIdentifier(
+        Uri uri,
+        out string profileId)
+    {
+        profileId = string.Empty;
+
+        var segments = uri.AbsolutePath
+            .Split(
+                '/',
+                StringSplitOptions.RemoveEmptyEntries
+                | StringSplitOptions.TrimEntries);
+
+        for (var i = 0; i < segments.Length - 1; i++)
+        {
+            if (segments[i].Equals("profile", StringComparison.OrdinalIgnoreCase)
+                || segments[i].Equals("u", StringComparison.OrdinalIgnoreCase))
+            {
+                return TryAcceptProfileIdentifier(
+                    Uri.UnescapeDataString(segments[i + 1]),
+                    out profileId);
+            }
+
+            if (segments[i].Equals("fw", StringComparison.OrdinalIgnoreCase)
+                && i + 2 < segments.Length
+                && segments[i + 1].Equals("live", StringComparison.OrdinalIgnoreCase))
+            {
+                return TryAcceptProfileIdentifier(
+                    Uri.UnescapeDataString(segments[i + 2]),
+                    out profileId);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(uri.Query))
+        {
+            foreach (var pair in uri.Query.TrimStart('?')
+                         .Split('&', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var separator = pair.IndexOf('=');
+                if (separator <= 0)
+                    continue;
+
+                var key = Uri.UnescapeDataString(pair[..separator]);
+                if (!key.Equals("authorId", StringComparison.OrdinalIgnoreCase)
+                    && !key.Equals("userId", StringComparison.OrdinalIgnoreCase)
+                    && !key.Equals("principalId", StringComparison.OrdinalIgnoreCase)
+                    && !key.Equals("profileId", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var value = Uri.UnescapeDataString(pair[(separator + 1)..]);
+                if (TryAcceptProfileIdentifier(value, out profileId))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryExtractProfileIdentifierFromBody(
+        string? body,
+        out string profileId)
+    {
+        profileId = string.Empty;
+        if (string.IsNullOrWhiteSpace(body))
+            return false;
+
+        // JSON often escapes '/' as '\/'. Normalizing it first also lets the same
+        // expression handle ordinary HTML links.
+        var normalized = body.Replace("\\/", "/", StringComparison.Ordinal);
+        var match = Regex.Match(
+            normalized,
+            @"(?:https?://(?:live|www)\.kuaishou\.com)?/profile/([A-Za-z0-9_-]{3,128})",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        return match.Success
+               && TryAcceptProfileIdentifier(match.Groups[1].Value, out profileId);
+    }
+
+    private static bool TryAcceptProfileIdentifier(
+        string? value,
+        out string profileId)
+    {
+        profileId = (value ?? string.Empty).Trim();
+        if (profileId.Length is < 3 or > 128)
+        {
+            profileId = string.Empty;
+            return false;
+        }
+
+        foreach (var ch in profileId)
+        {
+            if (!char.IsLetterOrDigit(ch) && ch is not '_' and not '-')
+            {
+                profileId = string.Empty;
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static async Task<string?> ReadLimitedTextAsync(
+        HttpContent content,
+        int maxBytes,
+        CancellationToken cancellationToken)
+    {
+        await using var stream = await content.ReadAsStreamAsync(cancellationToken);
+        using var memory = new MemoryStream(Math.Min(maxBytes, 64 * 1024));
+        var buffer = new byte[16 * 1024];
+
+        while (memory.Length < maxBytes)
+        {
+            var remaining = maxBytes - (int)memory.Length;
+            var read = await stream.ReadAsync(
+                buffer.AsMemory(0, Math.Min(buffer.Length, remaining)),
+                cancellationToken);
+            if (read == 0)
+                break;
+
+            await memory.WriteAsync(
+                buffer.AsMemory(0, read),
+                cancellationToken);
+        }
+
+        return Encoding.UTF8.GetString(memory.GetBuffer(), 0, (int)memory.Length);
     }
 
     public bool TryParseStreamRequest(
