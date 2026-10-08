@@ -10,6 +10,7 @@ using HelloLive.Core.Sites.Kuaishou;
 using HelloLive.Core.ViewModels;
 using HelloLive.Core.Views;
 using HelloLive.Desktop.Chromium;
+using HelloLive.Desktop.FFmpeg;
 using HelloLive.Desktop.Playwright;
 using HelloLive.Desktop.Remote;
 using HelloLive.Desktop.Recording;
@@ -84,10 +85,12 @@ public partial class App : Application
             splash.SetProgress(55, "正在初始化录像服务…", "准备实时 FLV/HLS 录像与下载目录");
             var recorder = new LiveStreamRecorder();
             var coordinator = new LiveMonitorCoordinator(_browser, platforms, recorder);
+            var ffmpegInstaller = new GyanFfmpegInstallerService();
 
             splash.SetProgress(66, "正在加载监控列表…", "恢复作者、头像缓存与监控策略");
             _viewModel = new MainWindowViewModel(
                 _browser,
+                ffmpegInstaller,
                 platforms,
                 coordinator,
                 settingsService,
