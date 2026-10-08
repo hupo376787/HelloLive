@@ -15,6 +15,7 @@ using HelloLive.Core.Sites;
 using HelloLive.Core.Utilities;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 
 namespace HelloLive.Core.ViewModels;
 
@@ -95,6 +96,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         _remoteApiToken = _settings.RemoteApiToken;
 
         AddMonitorCommand = new AsyncRelayCommand(AddMonitorAsync);
+        OpenBrowserCommand = new RelayCommand(OpenBrowser);
         StartMonitoringCommand = new AsyncRelayCommand(StartMonitoringAsync);
         StopMonitoringCommand = new AsyncRelayCommand(StopMonitoringAsync);
         CheckAllCommand = new AsyncRelayCommand(CheckAllAsync);
@@ -126,6 +128,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     public IReadOnlyList<PlatformOption> Platforms => _platforms.Platforms;
 
     public IAsyncRelayCommand AddMonitorCommand { get; }
+    public IRelayCommand OpenBrowserCommand { get; }
     public IAsyncRelayCommand StartMonitoringCommand { get; }
     public IAsyncRelayCommand StopMonitoringCommand { get; }
     public IAsyncRelayCommand CheckAllCommand { get; }
@@ -427,6 +430,56 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
         if (AutoStartMonitoring && Monitors.Any(x => x.IsEnabled))
             await StartMonitoringAsync();
+    }
+
+    private void OpenBrowser()
+    {
+        var input = NewMonitorUrl.Trim();
+        var url = UrlInputHelper.ExtractFirstHttpUrl(input);
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            AddLog("请输入或粘贴一个有效的 http/https 地址后再打开浏览器。");
+            return;
+        }
+
+        try
+        {
+            ProcessStartInfo startInfo;
+
+            if (OperatingSystem.IsWindows())
+            {
+                startInfo = new ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                };
+            }
+            else if (OperatingSystem.IsMacOS())
+            {
+                startInfo = new ProcessStartInfo
+                {
+                    FileName = "open",
+                    UseShellExecute = false
+                };
+                startInfo.ArgumentList.Add(url);
+            }
+            else
+            {
+                startInfo = new ProcessStartInfo
+                {
+                    FileName = "xdg-open",
+                    UseShellExecute = false
+                };
+                startInfo.ArgumentList.Add(url);
+            }
+
+            Process.Start(startInfo);
+            AddLog($"已使用系统默认浏览器打开：{url}");
+        }
+        catch (Exception ex)
+        {
+            AddLog($"打开浏览器失败：{ex.Message}");
+        }
     }
 
     private async Task AddMonitorAsync()
