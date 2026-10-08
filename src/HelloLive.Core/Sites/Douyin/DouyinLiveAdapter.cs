@@ -157,8 +157,7 @@ public sealed partial class DouyinLiveAdapter : ILivePlatformAdapter
         out LiveStreamInfo stream)
     {
         stream = null!;
-        if (!IsRoomEnterResponse(responseUrl)
-            || string.IsNullOrWhiteSpace(responseBody)
+        if (string.IsNullOrWhiteSpace(responseBody)
             || responseBody.Length > 2_000_000)
         {
             return false;
@@ -167,10 +166,22 @@ public sealed partial class DouyinLiveAdapter : ILivePlatformAdapter
         try
         {
             using var document = JsonDocument.Parse(responseBody);
-            if (!TryGetLiveRoom(document.RootElement, out var room))
-                return false;
 
-            return TryReadBestRoomStream(room, out stream);
+            if (IsRoomEnterResponse(responseUrl))
+            {
+                if (!TryGetLiveRoom(document.RootElement, out var room))
+                    return false;
+
+                return TryReadBestRoomStream(room, out stream);
+            }
+
+            if (IsUserProfileResponse(responseUrl)
+                && TryGetProfileUser(document.RootElement, out var user))
+            {
+                return TryReadProfileRoomStream(user, out stream);
+            }
+
+            return false;
         }
         catch (JsonException)
         {
@@ -185,24 +196,17 @@ public sealed partial class DouyinLiveAdapter : ILivePlatformAdapter
         out string authorId)
     {
         authorId = string.Empty;
-        if (!TryParseRoomEnterRoot(responseUrl, responseBody, out var document))
+        if (!TryParseAuthorContainer(
+                responseUrl,
+                responseBody,
+                out var document,
+                out var author))
+        {
             return false;
+        }
 
         using (document)
-        {
-            if (!TryGetRoomEnterData(document.RootElement, out var data))
-                return false;
-
-            if (TryGetObject(data, "user", out var user)
-                && TryReadAuthorId(user, out authorId))
-            {
-                return true;
-            }
-
-            return TryGetFirstRoom(data, out var room)
-                   && TryGetObject(room, "owner", out var owner)
-                   && TryReadAuthorId(owner, out authorId);
-        }
+            return TryReadAuthorId(author, out authorId);
     }
 
     public bool TryParseAuthorName(
@@ -212,24 +216,17 @@ public sealed partial class DouyinLiveAdapter : ILivePlatformAdapter
         out string authorName)
     {
         authorName = string.Empty;
-        if (!TryParseRoomEnterRoot(responseUrl, responseBody, out var document))
+        if (!TryParseAuthorContainer(
+                responseUrl,
+                responseBody,
+                out var document,
+                out var author))
+        {
             return false;
+        }
 
         using (document)
-        {
-            if (!TryGetRoomEnterData(document.RootElement, out var data))
-                return false;
-
-            if (TryGetObject(data, "user", out var user)
-                && TryReadNonEmptyString(user, "nickname", out authorName))
-            {
-                return true;
-            }
-
-            return TryGetFirstRoom(data, out var room)
-                   && TryGetObject(room, "owner", out var owner)
-                   && TryReadNonEmptyString(owner, "nickname", out authorName);
-        }
+            return TryReadNonEmptyString(author, "nickname", out authorName);
     }
 
     public bool TryParseAuthorAvatar(
@@ -239,23 +236,108 @@ public sealed partial class DouyinLiveAdapter : ILivePlatformAdapter
         out string avatarUrl)
     {
         avatarUrl = string.Empty;
-        if (!TryParseRoomEnterRoot(responseUrl, responseBody, out var document))
+        if (!TryParseAuthorContainer(
+                responseUrl,
+                responseBody,
+                out var document,
+                out var author))
+        {
             return false;
+        }
 
         using (document)
+            return TryReadAvatarUrl(author, out avatarUrl);
+    }
+
+    private static bool TryParseAuthorContainer(
+        string responseUrl,
+        string responseBody,
+        out JsonDocument document,
+        out JsonElement author)
+    {
+        document = null!;
+        author = default;
+
+        if (string.IsNullOrWhiteSpace(responseBody)
+            || responseBody.Length > 2_000_000
+            || (!IsRoomEnterResponse(responseUrl)
+                && !IsUserProfileResponse(responseUrl)))
         {
-            if (!TryGetRoomEnterData(document.RootElement, out var data))
-                return false;
+            return false;
+        }
 
-            if (TryGetObject(data, "user", out var user)
-                && TryReadAvatarUrl(user, out avatarUrl))
+        try
+        {
+            document = JsonDocument.Parse(responseBody);
+
+            if (IsUserProfileResponse(responseUrl))
             {
-                return true;
+                if (TryGetProfileUser(document.RootElement, out author))
+                    return true;
             }
+            else if (TryGetRoomEnterData(document.RootElement, out var data))
+            {
+                if (TryGetObject(data, "user", out author))
+                    return true;
 
-            return TryGetFirstRoom(data, out var room)
-                   && TryGetObject(room, "owner", out var owner)
-                   && TryReadAvatarUrl(owner, out avatarUrl);
+                if (TryGetFirstRoom(data, out var room)
+                    && TryGetObject(room, "owner", out author))
+                {
+                    return true;
+                }
+            }
+        }
+        catch (JsonException)
+        {
+        }
+
+        document?.Dispose();
+        document = null!;
+        author = default;
+        return false;
+    }
+
+    private static bool TryGetProfileUser(
+        JsonElement root,
+        out JsonElement user)
+    {
+        if (TryGetObject(root, "user", out user))
+            return true;
+
+        return TryGetObject(root, "data", out var data)
+               && TryGetObject(data, "user", out user);
+    }
+
+    private static bool TryReadProfileRoomStream(
+        JsonElement user,
+        out LiveStreamInfo stream)
+    {
+        stream = null!;
+        if (!TryGetProperty(user, "room_data", out var roomData))
+            return false;
+
+        if (roomData.ValueKind == JsonValueKind.Object)
+        {
+            return ReadInt64(roomData, "status") == 2
+                   && TryReadBestRoomStream(roomData, out stream);
+        }
+
+        if (roomData.ValueKind != JsonValueKind.String
+            || string.IsNullOrWhiteSpace(roomData.GetString()))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(roomData.GetString()!);
+            var room = document.RootElement;
+            return ReadInt64(room, "status") == 2
+                   && TryReadBestRoomStream(room, out stream);
+        }
+        catch (JsonException)
+        {
+            return false;
         }
     }
 
@@ -606,7 +688,7 @@ public sealed partial class DouyinLiveAdapter : ILivePlatformAdapter
     {
         foreach (var propertyName in new[]
                  {
-                     "id_str", "uid", "id", "open_id_str", "sec_uid"
+                     "uid", "id_str", "id", "open_id_str", "sec_uid"
                  })
         {
             if (TryReadNonEmptyString(user, propertyName, out authorId))
@@ -658,6 +740,18 @@ public sealed partial class DouyinLiveAdapter : ILivePlatformAdapter
 
         avatarUrl = string.Empty;
         return false;
+    }
+
+    private static bool IsUserProfileResponse(string responseUrl)
+    {
+        if (!TryCreateUri(responseUrl, out var uri))
+            return false;
+
+        return (uri.Host.Equals("www.douyin.com", StringComparison.OrdinalIgnoreCase)
+                || uri.Host.Equals("douyin.com", StringComparison.OrdinalIgnoreCase))
+               && uri.AbsolutePath.TrimEnd('/').Equals(
+                   "/aweme/v1/web/user/profile/other",
+                   StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsRoomEnterResponse(string responseUrl)
