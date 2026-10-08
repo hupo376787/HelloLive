@@ -75,8 +75,9 @@ public static class LiveAuthorIdentityHelper
             return string.Empty;
 
         // Kuaishou's visible profile/live URL id is a principal/live page identifier.
-        // HelloCrab's author folder id comes from API author.id/eid/userId instead.
-        if (IsKuaishouHost(uri.Host))
+        // Douyin's live web_rid and /user/{sec_uid} are also not the numeric account id
+        // used by the download folder. Both platforms therefore wait for API metadata.
+        if (IsKuaishouHost(uri.Host) || IsDouyinHost(uri.Host))
             return string.Empty;
 
         var segments = uri.AbsolutePath
@@ -97,4 +98,10 @@ public static class LiveAuthorIdentityHelper
            || host.EndsWith(".kuaishou.com", StringComparison.OrdinalIgnoreCase)
            || host.EndsWith(".chenzhongtech.com", StringComparison.OrdinalIgnoreCase)
            || host.EndsWith(".gifshow.com", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsDouyinHost(string host)
+        => host.Equals("douyin.com", StringComparison.OrdinalIgnoreCase)
+           || host.EndsWith(".douyin.com", StringComparison.OrdinalIgnoreCase)
+           || host.Equals("iesdouyin.com", StringComparison.OrdinalIgnoreCase)
+           || host.EndsWith(".iesdouyin.com", StringComparison.OrdinalIgnoreCase);
 }
