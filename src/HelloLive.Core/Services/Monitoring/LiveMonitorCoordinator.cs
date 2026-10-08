@@ -137,7 +137,13 @@ public sealed class LiveMonitorCoordinator : IAsyncDisposable
             if (target is null)
                 return;
 
-            await CheckTargetAsync(target, options, cancellationToken);
+            // A single monitor check is used by the monitor-card context menu,
+            // newly-added monitor probing, URL-change probing and remote single-item checks.
+            // These must never surface Chromium, regardless of the manual check-all switch.
+            await CheckTargetAsync(
+                target,
+                options with { Headless = true },
+                cancellationToken);
         }
         finally
         {
@@ -152,7 +158,7 @@ public sealed class LiveMonitorCoordinator : IAsyncDisposable
 
     private async Task RunLoopAsync(CancellationToken cancellationToken)
     {
-        Log?.Invoke("后台轮询固定使用无头 Chromium；手动“立即检查”是否无头由左侧开关决定。检测到直播后关闭临时 Page，并由独立录制连接持续保存。");
+        Log?.Invoke("后台轮询和监控项“立即检查”固定使用无头 Chromium；“立即检查全部”是否显示 Chromium 由左侧开关决定。检测到直播后关闭临时 Page，并由独立录制连接持续保存。");
 
         while (!cancellationToken.IsCancellationRequested)
         {
