@@ -500,8 +500,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         var newAvatarUrl = (avatarUrl ?? string.Empty).Trim();
         var input = (monitorUrl ?? string.Empty).Trim();
 
-        if (string.IsNullOrWhiteSpace(newName))
-            return "作者昵称不能为空。";
+        var useAutoDisplayName = string.IsNullOrWhiteSpace(newName);
 
         if (!string.IsNullOrWhiteSpace(newAvatarUrl)
             && (!Uri.TryCreate(newAvatarUrl, UriKind.Absolute, out var avatarUri)
@@ -565,8 +564,18 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             target.RecordingStatus = string.Empty;
         }
 
-        target.DisplayName = newName;
-        target.UseCustomDisplayName = true;
+        target.UseCustomDisplayName = !useAutoDisplayName;
+        if (useAutoDisplayName)
+        {
+            // 留空表示恢复自动昵称。先显示一个稳定的 URL 派生名称，
+            // 下一次无头检查拿到作者资料后会自动覆盖为最新昵称。
+            target.DisplayName = BuildDefaultName(normalizedUrl, adapter.DisplayName);
+        }
+        else
+        {
+            target.DisplayName = newName;
+        }
+
         target.UseCustomAvatar = !string.IsNullOrWhiteSpace(newAvatarUrl);
         target.AvatarUrl = target.UseCustomAvatar
             ? newAvatarUrl
@@ -584,7 +593,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         RaiseMetricsChanged();
         AddLog($"已修改作者信息：{target.DisplayName}。");
 
-        if (urlChanged && target.IsEnabled)
+        if ((urlChanged || useAutoDisplayName) && target.IsEnabled)
             await _coordinator.CheckOneAsync(target.Id);
 
         return null;
