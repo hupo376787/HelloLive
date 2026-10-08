@@ -2,7 +2,7 @@
 
 HelloLive 是一个基于 **.NET 10 + Avalonia 12 + Microsoft.Playwright 1.61.0** 的跨平台直播状态监控工具。首版按 HelloCrab 的整体架构和桌面 UI 布局重新设计：左侧为浏览器/监控设置，中间为指标、当前任务和日志，右侧把原“历史列表”替换为“监控列表”。
 
-当前首个落地平台是 **快手**。程序接受作者主页或快手分享短链，使用一个共享 Chromium 实例按需创建临时 Page，监听页面正常产生的网络请求；发现 `.flv` / `.m3u8` 播放地址后立即记录并中止媒体下载，然后关闭 Page。这样可以避免“一个作者一个常驻浏览器页面”带来的内存、CPU 和带宽浪费。
+当前已落地 **快手 + 抖音**。程序接受作者主页、直播页或平台分享短链，使用一个共享 Chromium 实例按需创建临时 Page；平台适配器可从 JSON 接口或真实媒体请求中解析 FLV/HLS，拿到直播地址后关闭 Page，再由独立录像器持续写盘。这样可以避免“一个作者一个常驻浏览器页面”带来的内存、CPU 和带宽浪费。
 
 ## 当前能力
 
@@ -17,6 +17,12 @@ HelloLive 是一个基于 **.NET 10 + Avalonia 12 + Microsoft.Playwright 1.61.0*
   - 正常重定向到的快手/晨钟移动页面
   - `yximgs.com` / `kwaicdn.com` 等直播 CDN 上的 HTTP-FLV / HLS 请求
   - JSON 接口中直接返回的 FLV/HLS URL
+- 抖音适配器支持：
+  - `https://live.douyin.com/{web_rid}` 直播页
+  - `v.douyin.com` 等分享地址的重定向展开
+  - `/webcast/room/web/enter` 返回的主播资料、开播状态和多档播放流
+  - 优先选取 H.264 蓝光 HTTP-FLV，避免桌面页先请求 H.265 时误选首条媒体流
+  - `douyincdn.com` / `smtcdns.net` 等直播 CDN 的 FLV/HLS 兜底识别
 - 监控列表持久化到 `monitors.json`，设置保存到 `settings.json`。
 - Windows / Linux / macOS 为实际监控主机；Android / iOS / Browser 已增加为远程遥控端，不运行 Playwright。
 
@@ -24,7 +30,7 @@ HelloLive 是一个基于 **.NET 10 + Avalonia 12 + Microsoft.Playwright 1.61.0*
 
 平台逻辑统一通过 `ILivePlatformAdapter` 隔离。监控调度、Playwright 生命周期、并发限制和 UI 不直接依赖快手规则。
 
-以后分析抖音等平台时，新增：
+新增平台时，只需新增对应的 `ILivePlatformAdapter` 实现，例如抖音当前位于：
 
 ```text
 Sites/Douyin/DouyinLiveAdapter.cs
