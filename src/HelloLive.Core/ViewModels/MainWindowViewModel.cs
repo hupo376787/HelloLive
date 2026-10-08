@@ -696,9 +696,12 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private void AddLog(string message)
     {
         var line = $"[{DateTime.Now:HH:mm:ss}] {message}";
-        Logs.Add(line);
+
+        // Newest first: the latest runtime event is always visible at the top,
+        // so users do not need to keep scrolling to the bottom while monitoring.
+        Logs.Insert(0, line);
         while (Logs.Count > 500)
-            Logs.RemoveAt(0);
+            Logs.RemoveAt(Logs.Count - 1);
     }
 
     public void AddRemoteLog(string message) => AddLog(message);
@@ -738,7 +741,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
                 RecordingFilePath = item.RecordingFilePath,
                 RecordingStatus = item.RecordingStatus
             }).ToList(),
-            Logs = Logs.TakeLast(120).ToList()
+            Logs = Logs.Take(120).ToList()
         };
 
     public Task StartRemoteMonitoringAsync() => StartMonitoringAsync();
