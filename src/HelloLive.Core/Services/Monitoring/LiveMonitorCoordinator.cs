@@ -13,6 +13,7 @@ public sealed class LiveMonitorCoordinator : IAsyncDisposable
     private readonly ILiveStreamRecorder _recorder;
     private readonly HttpClient _httpClient = new();
     private readonly ConcurrentDictionary<string, byte> _inFlight = new(StringComparer.Ordinal);
+    private readonly SemaphoreSlim _browserModeGate = new(1, 1);
     private readonly object _sync = new();
     private IReadOnlyList<LiveMonitorTargetSnapshot> _targets = Array.Empty<LiveMonitorTargetSnapshot>();
     private LiveMonitorOptions _options = new(true, 4, 300, 20, true);
@@ -108,24 +109,40 @@ public sealed class LiveMonitorCoordinator : IAsyncDisposable
 
     public async Task CheckAllOnceAsync(CancellationToken cancellationToken = default)
     {
-        var (targets, options) = GetSnapshot();
-        await CheckBatchAsync(
-            targets.Where(x => x.IsEnabled).ToArray(),
-            options,
-            cancellationToken);
+        await _browserModeGate.WaitAsync(cancellationToken);
+        try
+        {
+            var (targets, options) = GetSnapshot();
+            await CheckBatchAsync(
+                targets.Where(x => x.IsEnabled).ToArray(),
+                options,
+                cancellationToken);
+        }
+        finally
+        {
+            _browserModeGate.Release();
+        }
     }
 
     public async Task CheckOneAsync(
         string targetId,
         CancellationToken cancellationToken = default)
     {
-        var (targets, options) = GetSnapshot();
-        var target = targets.FirstOrDefault(
-            x => string.Equals(x.Id, targetId, StringComparison.Ordinal));
-        if (target is null)
-            return;
+        await _browserModeGate.WaitAsync(cancellationToken);
+        try
+        {
+            var (targets, options) = GetSnapshot();
+            var target = targets.FirstOrDefault(
+                x => string.Equals(x.Id, targetId, StringComparison.Ordinal));
+            if (target is null)
+                return;
 
-        await CheckTargetAsync(target, options, cancellationToken);
+            await CheckTargetAsync(target, options, cancellationToken);
+        }
+        finally
+        {
+            _browserModeGate.Release();
+        }
     }
 
     public Task StopRecordingAsync(
@@ -143,11 +160,19 @@ public sealed class LiveMonitorCoordinator : IAsyncDisposable
             var enabled = targets.Where(x => x.IsEnabled).ToArray();
             if (enabled.Length > 0)
             {
-                var backgroundOptions = options with { Headless = true };
-                await CheckBatchAsync(
-                    enabled,
-                    backgroundOptions,
-                    cancellationToken);
+                await _browserModeGate.WaitAsync(cancellationToken);
+                try
+                {
+                    var backgroundOptions = options with { Headless = true };
+                    await CheckBatchAsync(
+                        enabled,
+                        backgroundOptions,
+                        cancellationToken);
+                }
+                finally
+                {
+                    _browserModeGate.Release();
+                }
             }
 
             await Task.Delay(
@@ -281,5 +306,6 @@ public sealed class LiveMonitorCoordinator : IAsyncDisposable
         await StopAsync();
         await _recorder.DisposeAsync();
         _httpClient.Dispose();
+        _browserModeGate.Dispose();
     }
 }
