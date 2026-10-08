@@ -660,11 +660,15 @@
             <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
               <Button Content="取消"
                       MinHeight="40"
+                      HorizontalAlignment="Stretch"
+                      HorizontalContentAlignment="Center"
                       Click="EditUrlCancelButton_Click" />
               <Button Grid.Column="1"
                       Classes="primary"
                       Content="保存并检查"
                       MinHeight="40"
+                      HorizontalAlignment="Stretch"
+                      HorizontalContentAlignment="Center"
                       Click="EditUrlConfirmButton_Click" />
             </Grid>
           </StackPanel>
@@ -697,16 +701,22 @@
             <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
               <Button Content="取消"
                       MinHeight="42"
+                      HorizontalAlignment="Stretch"
+                      HorizontalContentAlignment="Center"
                       Click="CloseCancelButton_Click" />
               <Button Grid.Column="1"
                       Classes="primary"
                       Content="最小化到托盘"
                       MinHeight="42"
+                      HorizontalAlignment="Stretch"
+                      HorizontalContentAlignment="Center"
                       Click="CloseMinimizeToTrayButton_Click" />
               <Button Grid.Column="2"
                       Classes="coral"
                       Content="确认退出"
                       MinHeight="42"
+                      HorizontalAlignment="Stretch"
+                      HorizontalContentAlignment="Center"
                       Click="CloseConfirmButton_Click" />
             </Grid>
           </StackPanel>
