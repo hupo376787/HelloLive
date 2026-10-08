@@ -23,6 +23,7 @@ public sealed class LiveMonitorTarget : ObservableObject
     private string _authorId = string.Empty;
     private string _profileUrl = string.Empty;
     private string? _avatarUrl;
+    private bool _useCustomAvatar;
     private IImage? _avatarImage;
     private bool _isEnabled = true;
     private LiveMonitorState _state = LiveMonitorState.Idle;
@@ -92,6 +93,12 @@ public sealed class LiveMonitorTarget : ObservableObject
     {
         get => _avatarUrl;
         set => SetProperty(ref _avatarUrl, value);
+    }
+
+    public bool UseCustomAvatar
+    {
+        get => _useCustomAvatar;
+        set => SetProperty(ref _useCustomAvatar, value);
     }
 
     [JsonIgnore]
@@ -277,8 +284,11 @@ public sealed class LiveMonitorTarget : ObservableObject
             DisplayName = result.AuthorName;
         }
 
-        if (!string.IsNullOrWhiteSpace(result.AvatarUrl))
+        if (!UseCustomAvatar
+            && !string.IsNullOrWhiteSpace(result.AvatarUrl))
+        {
             AvatarUrl = result.AvatarUrl;
+        }
     }
 
     public void ApplyRecordingState(LiveRecordingState state)
