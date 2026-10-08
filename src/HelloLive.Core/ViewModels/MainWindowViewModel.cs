@@ -96,7 +96,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         _remoteApiToken = _settings.RemoteApiToken;
 
         AddMonitorCommand = new AsyncRelayCommand(AddMonitorAsync);
-        OpenBrowserCommand = new RelayCommand(OpenBrowser);
+        OpenBrowserCommand = new AsyncRelayCommand(() => OpenBrowserAsync());
         StartMonitoringCommand = new AsyncRelayCommand(StartMonitoringAsync);
         StopMonitoringCommand = new AsyncRelayCommand(StopMonitoringAsync);
         CheckAllCommand = new AsyncRelayCommand(CheckAllAsync);
@@ -128,7 +128,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     public IReadOnlyList<PlatformOption> Platforms => _platforms.Platforms;
 
     public IAsyncRelayCommand AddMonitorCommand { get; }
-    public IRelayCommand OpenBrowserCommand { get; }
+    public IAsyncRelayCommand OpenBrowserCommand { get; }
     public IAsyncRelayCommand StartMonitoringCommand { get; }
     public IAsyncRelayCommand StopMonitoringCommand { get; }
     public IAsyncRelayCommand CheckAllCommand { get; }
@@ -432,53 +432,84 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             await StartMonitoringAsync();
     }
 
-    private void OpenBrowser()
+    public async Task OpenBrowserAsync(string? input = null)
     {
-        var input = NewMonitorUrl.Trim();
-        var url = UrlInputHelper.ExtractFirstHttpUrl(input);
+        var source = string.IsNullOrWhiteSpace(input)
+            ? NewMonitorUrl.Trim()
+            : input.Trim();
+        var url = UrlInputHelper.ExtractFirstHttpUrl(source);
         if (string.IsNullOrWhiteSpace(url))
         {
             AddLog("请输入或粘贴一个有效的 http/https 地址后再打开浏览器。");
             return;
         }
 
+        string? executablePath;
         try
         {
-            ProcessStartInfo startInfo;
-
-            if (OperatingSystem.IsWindows())
-            {
-                startInfo = new ProcessStartInfo
-                {
-                    FileName = url,
-                    UseShellExecute = true
-                };
-            }
-            else if (OperatingSystem.IsMacOS())
-            {
-                startInfo = new ProcessStartInfo
-                {
-                    FileName = "open",
-                    UseShellExecute = false
-                };
-                startInfo.ArgumentList.Add(url);
-            }
-            else
-            {
-                startInfo = new ProcessStartInfo
-                {
-                    FileName = "xdg-open",
-                    UseShellExecute = false
-                };
-                startInfo.ArgumentList.Add(url);
-            }
-
-            Process.Start(startInfo);
-            AddLog($"已使用系统默认浏览器打开：{url}");
+            executablePath = await _browser.FindInstalledChromiumPathAsync();
         }
         catch (Exception ex)
         {
-            AddLog($"打开浏览器失败：{ex.Message}");
+            AddLog($"查找 Chrome for Testing 失败：{ex.Message}");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(executablePath)
+            || !IsPathInsideDirectory(
+                executablePath,
+                _browser.PreferredChromiumInstallDirectory))
+        {
+            AddLog(
+                $"未找到 HelloLive EXE 目录下的 Chrome for Testing，请先点击“安装 / 更新 Chromium”。安装目录：{_browser.PreferredChromiumInstallDirectory}");
+            return;
+        }
+
+        try
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = executablePath,
+                UseShellExecute = false,
+                WorkingDirectory = Path.GetDirectoryName(executablePath)
+                                   ?? AppContext.BaseDirectory
+            };
+
+            startInfo.ArgumentList.Add("--no-first-run");
+            startInfo.ArgumentList.Add("--no-default-browser-check");
+            startInfo.ArgumentList.Add("--new-window");
+            startInfo.ArgumentList.Add(url);
+
+            Process.Start(startInfo);
+            AddLog($"已使用 Chrome for Testing 打开：{url}");
+        }
+        catch (Exception ex)
+        {
+            AddLog($"打开 Chrome for Testing 失败：{ex.Message}");
+        }
+    }
+
+    private static bool IsPathInsideDirectory(
+        string filePath,
+        string directoryPath)
+    {
+        try
+        {
+            var fullFilePath = Path.GetFullPath(filePath);
+            var fullDirectoryPath = Path.GetFullPath(directoryPath);
+            var relative = Path.GetRelativePath(
+                fullDirectoryPath,
+                fullFilePath);
+
+            return !relative.Equals("..", StringComparison.Ordinal)
+                   && !relative.StartsWith(
+                       ".." + Path.DirectorySeparatorChar,
+                       StringComparison.Ordinal)
+                   && !Path.IsPathRooted(relative);
+        }
+        catch
+        {
+            return false;
         }
     }
 
