@@ -18,6 +18,15 @@ public interface ILivePlatformAdapter
     string NormalizeProfileUrl(string url);
 
     /// <summary>
+    /// 解析分享链接、短链或可能发生重定向的地址，并返回用于持久化监控的规范主页地址。
+    /// 默认只做同步标准化；具体平台可覆盖此方法处理重定向和平台 ID。
+    /// </summary>
+    Task<string> ResolveProfileUrlAsync(
+        string url,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(NormalizeProfileUrl(url));
+
+    /// <summary>
     /// 判断浏览器即将发出的请求是否为真实直播流。返回 true 时浏览器层会保存 URL，
     /// 并可立即中止媒体下载，避免直播页面长期占用带宽和解码资源。
     /// </summary>
