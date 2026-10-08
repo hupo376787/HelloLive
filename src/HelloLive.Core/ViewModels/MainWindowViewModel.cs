@@ -854,14 +854,6 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
                 target.ProfileUrl);
         }
 
-        // Migrate old entries: when the name is just the URL tail it was auto-generated,
-        // so a resolved nickname may safely replace it later.
-        if (!target.UseCustomDisplayName
-            && !LooksLikeAutoDisplayName(target.DisplayName, target.ProfileUrl))
-        {
-            target.UseCustomDisplayName = true;
-        }
-
         target.PropertyChanged += Target_PropertyChanged;
         Monitors.Add(target);
         _ = LoadMonitorAvatarAsync(target);
