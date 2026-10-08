@@ -220,10 +220,10 @@
                 <StackPanel Spacing="10">
                   <TextBlock Text="添加监控" FontSize="18" FontWeight="SemiBold" />
                   <TextBlock Classes="caption"
-                             Text="粘贴作者主页或直播分享地址。短链可由浏览器正常跟随重定向。"
+                             Text="可直接粘贴“文本 + URL + 文本”的分享内容；HelloLive 会自动提取 URL、跟随短链重定向，并统一保存为 live.kuaishou.com/profile/{作者标识}。"
                              TextWrapping="Wrap" />
                   <TextBox Text="{Binding NewMonitorUrl, Mode=TwoWay}"
-                           PlaceholderText="https://live.kuaishou.com/u/..."
+                           PlaceholderText="粘贴主页地址、短链或完整分享文本"
                            MinHeight="42" />
                   <TextBox Text="{Binding NewMonitorName, Mode=TwoWay}"
                            PlaceholderText="备注名称（可选）"
