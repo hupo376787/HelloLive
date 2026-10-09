@@ -883,7 +883,6 @@
                 Margin="0,19,27,0"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Top"
-                Panel.ZIndex="10"
                 Background="Transparent"
                 IsVisible="{Binding IsMonitorPanelVisible}"
                 Command="{Binding ToggleMonitorGridCommand}"
