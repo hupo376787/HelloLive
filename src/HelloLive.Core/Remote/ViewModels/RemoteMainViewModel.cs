@@ -34,6 +34,7 @@ public sealed class RemoteMainViewModel : ObservableObject, IAsyncDisposable
     private string _newMonitorUrl = string.Empty;
     private string _newMonitorName = string.Empty;
     private bool _isDarkTheme = true;
+    private bool _isDesktopLayout;
 
     public RemoteMainViewModel(RemoteLiveClient client)
     {
@@ -150,6 +151,32 @@ public sealed class RemoteMainViewModel : ObservableObject, IAsyncDisposable
     }
 
     public string ThemeIcon => _isDarkTheme ? "☀" : "☾";
+
+    public bool IsDesktopLayout
+    {
+        get => _isDesktopLayout;
+        private set
+        {
+            if (!SetProperty(ref _isDesktopLayout, value))
+                return;
+
+            OnPropertyChanged(nameof(IsCompactLayout));
+        }
+    }
+
+    public bool IsCompactLayout => !IsDesktopLayout;
+
+    public void UpdateViewportWidth(double width)
+    {
+        if (!double.IsFinite(width) || width <= 0)
+            return;
+
+        // Browser uses the desktop three-column layout only when there is enough
+        // horizontal room. Android/iOS keep the touch-oriented compact layout.
+        IsDesktopLayout =
+            OperatingSystem.IsBrowser()
+            && width >= 1180d;
+    }
 
     public string ConnectionHint => OperatingSystem.IsAndroid() || OperatingSystem.IsIOS()
         ? "手机端请填写桌面端显示的局域网地址，不能使用 127.0.0.1 或 localhost。"
