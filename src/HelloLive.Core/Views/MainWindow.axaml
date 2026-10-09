@@ -547,17 +547,17 @@
                            TextWrapping="Wrap" />
               </StackPanel>
               <Button Grid.Column="1"
-                      Width="36"
-                      Height="36"
-                      Padding="8"
+                      Width="34"
+                      Height="34"
+                      Padding="5"
                       Margin="8,0,0,0"
                       Background="Transparent"
                       Command="{Binding ToggleMonitorGridCommand}"
                       ToolTip.Tip="{Binding MonitorGridToggleToolTip}">
-                <Viewbox Width="18" Height="18" Stretch="Uniform">
-                  <Path Data="M2,7 L2,2 L7,2 M2,2 L7,7 M14,9 L14,14 L9,14 M14,14 L9,9"
+                <Viewbox Width="20" Height="20" Stretch="Uniform">
+                  <Path Data="M6,2 H2 V6 M10,2 H14 V6 M2,10 V14 H6 M14,10 V14 H10"
                         Stroke="{DynamicResource TextPrimaryColor}"
-                        StrokeThickness="1.6"
+                        StrokeThickness="1.5"
                         StrokeLineCap="Round"
                         StrokeJoin="Round"
                         Fill="Transparent" />
@@ -729,17 +729,17 @@
                            TextWrapping="Wrap" />
               </StackPanel>
               <Button Grid.Column="1"
-                      Width="36"
-                      Height="36"
-                      Padding="8"
+                      Width="34"
+                      Height="34"
+                      Padding="5"
                       Margin="8,0,0,0"
                       Background="Transparent"
                       Command="{Binding ToggleMonitorGridCommand}"
                       ToolTip.Tip="{Binding MonitorGridToggleToolTip}">
-                <Viewbox Width="18" Height="18" Stretch="Uniform">
-                  <Path Data="M7,2 L7,7 L2,7 M7,7 L2,2 M9,14 L9,9 L14,9 M9,9 L14,14"
+                <Viewbox Width="20" Height="20" Stretch="Uniform">
+                  <Path Data="M2,6 H6 V2 M14,6 H10 V2 M2,10 H6 V14 M14,10 H10 V14"
                         Stroke="{DynamicResource TextPrimaryColor}"
-                        StrokeThickness="1.6"
+                        StrokeThickness="1.5"
                         StrokeLineCap="Round"
                         StrokeJoin="Round"
                         Fill="Transparent" />
