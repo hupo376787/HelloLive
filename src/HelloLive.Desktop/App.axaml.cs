@@ -20,6 +20,7 @@ namespace HelloLive.Desktop;
 
 public partial class App : Application
 {
+    private static readonly TimeSpan MinimumSplashDisplayTime = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan SplashCompletionHoldTime = TimeSpan.FromMilliseconds(120);
     private static readonly TimeSpan TrayDoubleClickThreshold = TimeSpan.FromMilliseconds(600);
 
@@ -50,7 +51,8 @@ public partial class App : Application
 
                 _desktopStartupStarted = true;
                 await splash.WaitUntilPresentedAsync();
-                await InitializeDesktopAsync(desktop, splash);
+                var splashShownAt = DateTimeOffset.UtcNow;
+                await InitializeDesktopAsync(desktop, splash, splashShownAt);
             };
         }
 
@@ -59,13 +61,11 @@ public partial class App : Application
 
     private async Task InitializeDesktopAsync(
         IClassicDesktopStyleApplicationLifetime desktop,
-        SplashWindow splash)
+        SplashWindow splash,
+        DateTimeOffset splashShownAt)
     {
         try
         {
-            // Progress now represents completed startup milestones. Percentages only
-            // advance after the corresponding work succeeds; the current status/detail
-            // describes the operation that is actually running.
             splash.SetProgress(
                 0,
                 "正在启动 HelloLive…",
@@ -79,12 +79,12 @@ public partial class App : Application
             var settingsService = new SettingsService();
             var monitorStore = new MonitorStore(settingsService.SettingsPath);
             splash.SetProgress(
-                10,
+                8,
                 "设置读取完成",
                 "应用配置与监控存储已准备");
 
             splash.SetProgress(
-                10,
+                8,
                 "正在加载平台解析器…",
                 "创建已启用的直播平台适配器");
             var platforms = new LivePlatformRegistry(new ILivePlatformAdapter[]
@@ -93,23 +93,23 @@ public partial class App : Application
                 new DouyinLiveAdapter()
             });
             splash.SetProgress(
-                20,
+                16,
                 "平台解析器已就绪",
                 $"已加载 {platforms.Platforms.Count} 个直播平台适配器");
 
             splash.SetProgress(
-                20,
+                16,
                 "正在准备浏览器服务…",
                 "初始化 Chrome for Testing / Playwright 探测服务");
             var installer = new PlaywrightChromiumInstaller();
             _browser = new PlaywrightLiveBrowserService(installer);
             splash.SetProgress(
-                30,
+                24,
                 "浏览器服务已创建",
                 "直播页面探测服务已准备");
 
             splash.SetProgress(
-                30,
+                24,
                 "正在准备录像服务…",
                 "初始化 FLV/HLS 录像、调度器和 FFmpeg 服务");
             var recorder = new LiveStreamRecorder();
@@ -119,12 +119,47 @@ public partial class App : Application
                 recorder);
             var ffmpegInstaller = new GyanFfmpegInstallerService();
             splash.SetProgress(
-                40,
+                32,
                 "录像服务已创建",
                 "录像器与直播监控调度器已准备");
 
             splash.SetProgress(
-                40,
+                32,
+                "正在扫描历史录像…",
+                "检查 Download 目录中的 FLV/MP4 时长与实际时间戳");
+
+            var toolInfo = ffmpegInstaller.GetToolInfo();
+            var videoRepair = new StartupVideoRepairService();
+            var repairSummary = await videoRepair.ScanAndRepairAsync(
+                recorder.DownloadRoot,
+                toolInfo.FfmpegPath,
+                toolInfo.FfprobePath,
+                progress =>
+                {
+                    var fraction = progress.TotalCount > 0
+                        ? Math.Clamp(
+                            progress.ProcessedCount / (double)progress.TotalCount,
+                            0d,
+                            1d)
+                        : 1d;
+
+                    splash.SetProgress(
+                        32d + 20d * fraction,
+                        "正在检查历史录像…",
+                        progress.Message);
+                });
+
+            var repairDetail = repairSummary.SkippedBecauseFfmpegMissing
+                ? $"发现 {repairSummary.TotalCount} 个录像文件；未找到 EXE 目录中的 FFmpeg/FFprobe，已跳过修复"
+                : $"已检查 {repairSummary.TotalCount} 个录像，修复 {repairSummary.RepairedCount} 个，正常 {repairSummary.HealthyCount} 个，失败 {repairSummary.FailedCount} 个";
+
+            splash.SetProgress(
+                52,
+                "历史录像检查完成",
+                repairDetail);
+
+            splash.SetProgress(
+                52,
                 "正在读取监控列表…",
                 "创建主视图模型并恢复已保存的监控对象");
             _viewModel = new MainWindowViewModel(
@@ -139,12 +174,12 @@ public partial class App : Application
             _viewModel.RemoteApiPortChanged += ViewModel_RemoteApiPortChanged;
 
             splash.SetProgress(
-                50,
+                58,
                 "监控列表已读取",
                 $"已恢复 {_viewModel.MonitorCount} 个监控对象");
 
-            const double initializeStart = 50d;
-            const double initializeRange = 28d;
+            const double initializeStart = 58d;
+            const double initializeRange = 24d;
             await _viewModel.InitializeAsync(
                 (fraction, status, detail) =>
                 {
@@ -156,20 +191,20 @@ public partial class App : Application
                 });
 
             splash.SetProgress(
-                78,
+                82,
                 "正在应用后台服务配置…",
                 "根据设置启动或保持关闭远程控制服务器");
             _remoteApiHost = new RemoteApiHostService(_viewModel);
             await _remoteApiHost.SetEnabledAsync(_viewModel.RemoteApiEnabled);
             splash.SetProgress(
-                88,
+                90,
                 "后台服务已就绪",
                 _viewModel.RemoteApiEnabled
                     ? "远程控制服务器已按当前配置启动"
                     : "远程控制服务器当前未启用");
 
             splash.SetProgress(
-                88,
+                90,
                 "正在创建主界面…",
                 "创建主窗口并绑定监控状态");
             var mainWindow = new MainWindow
@@ -177,7 +212,7 @@ public partial class App : Application
                 DataContext = _viewModel
             };
             splash.SetProgress(
-                95,
+                96,
                 "主界面已创建",
                 "正在初始化系统托盘");
 
@@ -188,7 +223,12 @@ public partial class App : Application
                 "启动完成",
                 "所有启动步骤均已完成，正在打开主界面");
 
-            await Task.Delay(SplashCompletionHoldTime);
+            var elapsed = DateTimeOffset.UtcNow - splashShownAt;
+            var remaining = MinimumSplashDisplayTime - elapsed;
+            var hold = remaining > SplashCompletionHoldTime
+                ? remaining
+                : SplashCompletionHoldTime;
+            await Task.Delay(hold);
 
             desktop.MainWindow = mainWindow;
             mainWindow.Show();
