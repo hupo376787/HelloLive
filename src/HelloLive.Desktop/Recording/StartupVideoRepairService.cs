@@ -119,6 +119,12 @@ internal sealed class StartupVideoRepairService
 
                     ReplaceOriginal(temporaryPath, file);
                     repaired++;
+                    progress?.Invoke(new StartupVideoRepairProgress(
+                        index + 1,
+                        files.Length,
+                        repaired,
+                        failed,
+                        $"已修复录像：{Path.GetFileName(file)}"));
                 }
                 finally
                 {
@@ -131,8 +137,14 @@ internal sealed class StartupVideoRepairService
             }
             catch
             {
-                // A damaged or locked file must not prevent HelloLive from starting.
+                // A damaged or locked file must not affect the running application.
                 failed++;
+                progress?.Invoke(new StartupVideoRepairProgress(
+                    index + 1,
+                    files.Length,
+                    repaired,
+                    failed,
+                    $"录像修复失败：{Path.GetFileName(file)}"));
             }
         }
 
