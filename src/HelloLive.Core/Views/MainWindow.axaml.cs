@@ -17,6 +17,19 @@ public partial class MainWindow : Window
 
     private const double ResizeBorderThickness = 7;
 
+    private static readonly Cursor ResizeNorthSouthCursor =
+        new(StandardCursorType.SizeNorthSouth);
+    private static readonly Cursor ResizeWestEastCursor =
+        new(StandardCursorType.SizeWestEast);
+    private static readonly Cursor ResizeNorthWestCursor =
+        new(StandardCursorType.TopLeftCorner);
+    private static readonly Cursor ResizeNorthEastCursor =
+        new(StandardCursorType.TopRightCorner);
+    private static readonly Cursor ResizeSouthWestCursor =
+        new(StandardCursorType.BottomLeftCorner);
+    private static readonly Cursor ResizeSouthEastCursor =
+        new(StandardCursorType.BottomRightCorner);
+
     public event EventHandler? MinimizeToTrayRequested;
 
     public MainWindow()
@@ -64,14 +77,14 @@ public partial class MainWindow : Window
         var edge = GetResizeEdge(e.GetPosition(this));
         Cursor = edge switch
         {
-            WindowEdge.NorthWest => new Cursor(StandardCursorType.TopLeftCorner),
-            WindowEdge.North => new Cursor(StandardCursorType.SizeNorthSouth),
-            WindowEdge.NorthEast => new Cursor(StandardCursorType.TopRightCorner),
-            WindowEdge.West => new Cursor(StandardCursorType.SizeWestEast),
-            WindowEdge.East => new Cursor(StandardCursorType.SizeWestEast),
-            WindowEdge.SouthWest => new Cursor(StandardCursorType.BottomLeftCorner),
-            WindowEdge.South => new Cursor(StandardCursorType.SizeNorthSouth),
-            WindowEdge.SouthEast => new Cursor(StandardCursorType.BottomRightCorner),
+            WindowEdge.NorthWest => ResizeNorthWestCursor,
+            WindowEdge.North => ResizeNorthSouthCursor,
+            WindowEdge.NorthEast => ResizeNorthEastCursor,
+            WindowEdge.West => ResizeWestEastCursor,
+            WindowEdge.East => ResizeWestEastCursor,
+            WindowEdge.SouthWest => ResizeSouthWestCursor,
+            WindowEdge.South => ResizeNorthSouthCursor,
+            WindowEdge.SouthEast => ResizeSouthEastCursor,
             _ => Cursor.Default
         };
     }
