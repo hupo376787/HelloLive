@@ -339,28 +339,106 @@ public sealed class KuaishouLiveAdapter : ILivePlatformAdapter
         out string authorId)
     {
         authorId = string.Empty;
-        if (string.IsNullOrWhiteSpace(responseBody) || responseBody.Length > 2_000_000)
+        if (!TryParseBaseUserById(
+                responseUrl,
+                responseBody,
+                out var document,
+                out var userInfo))
+        {
             return false;
+        }
 
-        if (!IsAuthorMetadataResponse(responseUrl))
+        using (document)
+        {
+            // /userinfo/byid 的 id 是 profile principalId（如 3x4...），
+            // originUserId 才是稳定的数字账号 ID，优先用于录像目录和作者身份。
+            foreach (var propertyName in new[]
+                     {
+                         "originUserId", "origin_user_id", "userId", "user_id", "id"
+                     })
+            {
+                if (!TryGetPropertyIgnoreCase(userInfo, propertyName, out var value))
+                    continue;
+
+                var text = value.ValueKind switch
+                {
+                    JsonValueKind.String => value.GetString(),
+                    JsonValueKind.Number => value.GetRawText(),
+                    _ => null
+                };
+
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    authorId = text.Trim();
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryParseBaseUserById(
+        string responseUrl,
+        string responseBody,
+        out JsonDocument document,
+        out JsonElement userInfo)
+    {
+        document = null!;
+        userInfo = default;
+
+        if (!IsBaseUserByIdResponse(responseUrl)
+            || string.IsNullOrWhiteSpace(responseBody)
+            || responseBody.Length > 2_000_000)
+        {
             return false;
+        }
 
         var trimmed = responseBody.AsSpan().TrimStart();
-        if (trimmed.IsEmpty || (trimmed[0] != '{' && trimmed[0] != '['))
+        if (trimmed.IsEmpty || trimmed[0] != '{')
             return false;
 
         try
         {
-            using var document = JsonDocument.Parse(responseBody);
-            return TryFindAuthorId(
-                document.RootElement,
-                IsGraphQlResponse(responseUrl),
-                out authorId);
+            document = JsonDocument.Parse(responseBody);
+
+            if (!TryGetPropertyIgnoreCase(document.RootElement, "data", out var data)
+                || data.ValueKind != JsonValueKind.Object
+                || !TryGetPropertyIgnoreCase(data, "userInfo", out userInfo)
+                || userInfo.ValueKind != JsonValueKind.Object)
+            {
+                document.Dispose();
+                document = null!;
+                userInfo = default;
+                return false;
+            }
+
+            return true;
         }
         catch (JsonException)
         {
+            document?.Dispose();
+            document = null!;
+            userInfo = default;
             return false;
         }
+    }
+
+    private static bool IsBaseUserByIdResponse(string responseUrl)
+    {
+        if (!Uri.TryCreate(responseUrl, UriKind.Absolute, out var uri))
+            return false;
+
+        if (!uri.Host.EndsWith("kuaishou.com", StringComparison.OrdinalIgnoreCase)
+            && !uri.Host.EndsWith("gifshow.com", StringComparison.OrdinalIgnoreCase)
+            && !uri.Host.EndsWith("chenzhongtech.com", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return uri.AbsolutePath.TrimEnd('/').Equals(
+            "/live_api/baseuser/userinfo/byid",
+            StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool TryFindAuthorId(
@@ -507,27 +585,25 @@ public sealed class KuaishouLiveAdapter : ILivePlatformAdapter
         out string authorName)
     {
         authorName = string.Empty;
-        if (string.IsNullOrWhiteSpace(responseBody) || responseBody.Length > 2_000_000)
-            return false;
-
-        if (!IsAuthorMetadataResponse(responseUrl))
-            return false;
-
-        var trimmed = responseBody.AsSpan().TrimStart();
-        if (trimmed.IsEmpty || (trimmed[0] != '{' && trimmed[0] != '['))
-            return false;
-
-        try
+        if (!TryParseBaseUserById(
+                responseUrl,
+                responseBody,
+                out var document,
+                out var userInfo))
         {
-            using var document = JsonDocument.Parse(responseBody);
-            return TryFindAuthorName(
-                document.RootElement,
-                IsGraphQlResponse(responseUrl),
-                out authorName);
+            return false;
         }
-        catch (JsonException)
+
+        using (document)
         {
-            return false;
+            if (!TryGetPropertyIgnoreCase(userInfo, "name", out var value)
+                || value.ValueKind != JsonValueKind.String)
+            {
+                return false;
+            }
+
+            authorName = value.GetString()?.Trim() ?? string.Empty;
+            return authorName.Length > 0;
         }
     }
 
@@ -631,28 +707,7 @@ public sealed class KuaishouLiveAdapter : ILivePlatformAdapter
     }
 
     private static bool IsAuthorMetadataResponse(string responseUrl)
-    {
-        if (!Uri.TryCreate(responseUrl, UriKind.Absolute, out var uri))
-            return false;
-
-        var host = uri.Host;
-        if (!host.EndsWith("kuaishou.com", StringComparison.OrdinalIgnoreCase)
-            && !host.EndsWith("gifshow.com", StringComparison.OrdinalIgnoreCase)
-            && !host.EndsWith("chenzhongtech.com", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        var path = uri.AbsolutePath.TrimEnd('/');
-        var isGraphQl = IsGraphQlResponse(responseUrl);
-
-        return path.Equals("/live_api/profile/public", StringComparison.OrdinalIgnoreCase)
-               || path.Equals("/rest/v/profile/feed", StringComparison.OrdinalIgnoreCase)
-               || path.Equals("/live_api/baseuser/userinfo/sensitive", StringComparison.OrdinalIgnoreCase)
-               || path.Contains("/live_api/profile/", StringComparison.OrdinalIgnoreCase)
-               || path.Contains("/live_api/baseuser/", StringComparison.OrdinalIgnoreCase)
-               || isGraphQl;
-    }
+        => IsBaseUserByIdResponse(responseUrl);
 
     public bool TryParseAuthorAvatar(
         string responseUrl,
@@ -661,27 +716,24 @@ public sealed class KuaishouLiveAdapter : ILivePlatformAdapter
         out string avatarUrl)
     {
         avatarUrl = string.Empty;
-        if (string.IsNullOrWhiteSpace(responseBody) || responseBody.Length > 2_000_000)
-            return false;
-
-        if (!IsAuthorMetadataResponse(responseUrl))
-            return false;
-
-        var trimmed = responseBody.AsSpan().TrimStart();
-        if (trimmed.IsEmpty || (trimmed[0] != '{' && trimmed[0] != '['))
-            return false;
-
-        try
+        if (!TryParseBaseUserById(
+                responseUrl,
+                responseBody,
+                out var document,
+                out var userInfo))
         {
-            using var document = JsonDocument.Parse(responseBody);
-            return TryFindAuthorAvatar(
-                document.RootElement,
-                IsGraphQlResponse(responseUrl),
-                out avatarUrl);
+            return false;
         }
-        catch (JsonException)
+
+        using (document)
         {
-            return false;
+            if (TryGetPropertyIgnoreCase(userInfo, "avatar", out var avatar)
+                && TryReadFirstHttpUrl(avatar, out avatarUrl))
+            {
+                return true;
+            }
+
+            return TryReadAuthorAvatar(userInfo, out avatarUrl);
         }
     }
 
