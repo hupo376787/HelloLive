@@ -113,11 +113,9 @@ internal static class FlvStreamWriter
                 // long-running upstream timestamp (for example 55,877,535 ms). If the
                 // sequence header becomes the base, the local clip appears many hours
                 // long even though it only contains a few minutes of media.
-                var payload = rented is null
-                    ? ReadOnlySpan<byte>.Empty
-                    : rented.AsSpan(0, dataSize);
                 var isTimestampAnchor =
-                    isMediaTag && IsActualMediaPayload(tagType, payload);
+                    isMediaTag
+                    && IsActualMediaPayload(tagType, rented, dataSize);
 
                 if (isTimestampAnchor && baseTimestamp is null)
                     baseTimestamp = originalTimestamp;
@@ -177,10 +175,13 @@ internal static class FlvStreamWriter
 
     private static bool IsActualMediaPayload(
         int tagType,
-        ReadOnlySpan<byte> payload)
+        byte[]? payloadBuffer,
+        int payloadLength)
     {
-        if (payload.IsEmpty)
+        if (payloadBuffer is null || payloadLength <= 0)
             return false;
+
+        var payload = payloadBuffer.AsSpan(0, payloadLength);
 
         if (tagType == 8)
         {
