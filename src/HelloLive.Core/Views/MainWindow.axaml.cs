@@ -145,6 +145,14 @@ public partial class MainWindow : Window
         return null;
     }
 
+    private void ExpandedMonitorList_SizeChanged(
+        object? sender,
+        SizeChangedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel)
+            viewModel.UpdateMonitorGridAvailableWidth(e.NewSize.Width);
+    }
+
     private void TitleBar_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
