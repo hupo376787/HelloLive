@@ -44,6 +44,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private bool _autoStartMonitoring;
     private bool _isMonitoring;
     private bool _isMonitorPanelVisible;
+    private bool _isMonitorGridExpanded;
     private string _pushPlusToken = string.Empty;
     private string _currentTask = "等待任务";
     private string _browserStatusText = "尚未检查 Chromium";
@@ -106,6 +107,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         RemoveMonitorCommand = new AsyncRelayCommand<LiveMonitorTarget>(RemoveMonitorAsync);
         ToggleThemeCommand = new RelayCommand(ToggleTheme);
         ToggleMonitorPanelCommand = new RelayCommand(ToggleMonitorPanel);
+        ToggleMonitorGridCommand = new RelayCommand(ToggleMonitorGrid);
 
         foreach (var target in _monitorStore.Load())
             AttachTarget(target);
@@ -138,6 +140,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     public IAsyncRelayCommand<LiveMonitorTarget> RemoveMonitorCommand { get; }
     public IRelayCommand ToggleThemeCommand { get; }
     public IRelayCommand ToggleMonitorPanelCommand { get; }
+    public IRelayCommand ToggleMonitorGridCommand { get; }
 
     public string NewMonitorUrl
     {
@@ -262,10 +265,39 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         {
             if (!SetProperty(ref _isMonitorPanelVisible, value))
                 return;
+
+            if (!value && IsMonitorGridExpanded)
+                IsMonitorGridExpanded = false;
+
+            OnPropertyChanged(nameof(IsCompactMonitorPanelVisible));
+            OnPropertyChanged(nameof(MonitorPanelButtonText));
             _settings.MonitorPanelVisible = value;
             PersistSettingsSoon();
         }
     }
+
+    public bool IsMonitorGridExpanded
+    {
+        get => _isMonitorGridExpanded;
+        private set
+        {
+            if (!SetProperty(ref _isMonitorGridExpanded, value))
+                return;
+
+            OnPropertyChanged(nameof(IsCompactMonitorPanelVisible));
+            OnPropertyChanged(nameof(MonitorGridToggleIcon));
+            OnPropertyChanged(nameof(MonitorGridToggleToolTip));
+        }
+    }
+
+    public bool IsCompactMonitorPanelVisible
+        => IsMonitorPanelVisible && !IsMonitorGridExpanded;
+
+    public string MonitorGridToggleIcon
+        => IsMonitorGridExpanded ? "⤡" : "⤢";
+
+    public string MonitorGridToggleToolTip
+        => IsMonitorGridExpanded ? "恢复监控列表侧栏" : "展开监控列表";
 
     public string CurrentTask
     {
@@ -1199,7 +1231,14 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private void ToggleMonitorPanel()
     {
         IsMonitorPanelVisible = !IsMonitorPanelVisible;
-        OnPropertyChanged(nameof(MonitorPanelButtonText));
+    }
+
+    private void ToggleMonitorGrid()
+    {
+        if (!IsMonitorPanelVisible)
+            IsMonitorPanelVisible = true;
+
+        IsMonitorGridExpanded = !IsMonitorGridExpanded;
     }
 
     private void ApplyTheme(string theme)
