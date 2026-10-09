@@ -11,6 +11,14 @@ public partial class RemoteMainView : UserControl
         InitializeComponent();
     }
 
+    private void RemoteMainView_SizeChanged(
+        object? sender,
+        SizeChangedEventArgs e)
+    {
+        if (DataContext is RemoteMainViewModel viewModel)
+            viewModel.UpdateViewportWidth(e.NewSize.Width);
+    }
+
     private async void CheckMonitor_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (sender is Button { Tag: RemoteMonitorDto item }
