@@ -105,6 +105,9 @@
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
+    <Style Selector="ListBox.monitorGridList ListBoxItem">
+      <Setter Property="Margin" Value="0,0,12,12" />
+    </Style>
     <Style Selector="Button.monitorAction">
       <Setter Property="MinHeight" Value="34" />
       <Setter Property="Padding" Value="9,6" />
@@ -785,19 +788,21 @@
               </Button>
             </Grid>
 
-            <ListBox Grid.Row="1"
-                     Margin="0,0,-18,0"
-                     Classes="monitorList"
+            <ListBox x:Name="ExpandedMonitorList"
+                     Grid.Row="1"
+                     Margin="0"
+                     Classes="monitorList monitorGridList"
                      ItemsSource="{Binding Monitors}"
                      Background="Transparent"
                      BorderThickness="0"
                      SelectionMode="Single"
+                     SizeChanged="ExpandedMonitorList_SizeChanged"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      ScrollViewer.VerticalScrollBarVisibility="Auto">
               <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
                   <WrapPanel Orientation="Horizontal"
-                             ItemWidth="340" />
+                             ItemWidth="{Binding MonitorGridItemWidth}" />
                 </ItemsPanelTemplate>
               </ListBox.ItemsPanel>
               <ListBox.ItemTemplate>
