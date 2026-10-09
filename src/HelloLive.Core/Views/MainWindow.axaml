@@ -549,22 +549,39 @@
               <Button Grid.Column="1"
                       Width="34"
                       Height="34"
-                      Padding="2"
+                      Padding="0"
                       Margin="8,0,0,0"
                       Background="Transparent"
                       Command="{Binding ToggleMonitorGridCommand}"
                       ToolTip.Tip="{Binding MonitorGridToggleToolTip}">
-                <Viewbox Width="20" Height="20" Stretch="Uniform">
-                  <Viewbox.RenderTransform>
-                    <TranslateTransform X="-2" Y="-2" />
-                  </Viewbox.RenderTransform>
-                  <Path Data="M6,2 H2 V6 M10,2 H14 V6 M2,10 V14 H6 M14,10 V14 H10"
+                <Canvas Width="18"
+                        Height="18"
+                        RenderTransform="translate(-1.5px, -1.5px)">
+                  <Path Data="M7,2 L2,2 L2,7"
                         Stroke="#7A8498"
-                        StrokeThickness="1.5"
-                        StrokeLineCap="Round"
-                        StrokeJoin="Round"
+                        StrokeThickness="2"
+                        StrokeLineCap="Square"
+                        StrokeJoin="Miter"
                         Fill="Transparent" />
-                </Viewbox>
+                  <Path Data="M11,2 L16,2 L16,7"
+                        Stroke="#7A8498"
+                        StrokeThickness="2"
+                        StrokeLineCap="Square"
+                        StrokeJoin="Miter"
+                        Fill="Transparent" />
+                  <Path Data="M2,11 L2,16 L7,16"
+                        Stroke="#7A8498"
+                        StrokeThickness="2"
+                        StrokeLineCap="Square"
+                        StrokeJoin="Miter"
+                        Fill="Transparent" />
+                  <Path Data="M16,11 L16,16 L11,16"
+                        Stroke="#7A8498"
+                        StrokeThickness="2"
+                        StrokeLineCap="Square"
+                        StrokeJoin="Miter"
+                        Fill="Transparent" />
+                </Canvas>
               </Button>
             </Grid>
 
@@ -734,22 +751,39 @@
               <Button Grid.Column="1"
                       Width="34"
                       Height="34"
-                      Padding="2"
+                      Padding="0"
                       Margin="8,0,0,0"
                       Background="Transparent"
                       Command="{Binding ToggleMonitorGridCommand}"
                       ToolTip.Tip="{Binding MonitorGridToggleToolTip}">
-                <Viewbox Width="20" Height="20" Stretch="Uniform">
-                  <Viewbox.RenderTransform>
-                    <TranslateTransform X="-2" Y="-2" />
-                  </Viewbox.RenderTransform>
-                  <Path Data="M2,6 H6 V2 M14,6 H10 V2 M2,10 H6 V14 M14,10 H10 V14"
+                <Canvas Width="18"
+                        Height="18"
+                        RenderTransform="translate(-1.5px, -1.5px)">
+                  <Path Data="M2,7 L7,7 L7,2"
                         Stroke="#7A8498"
-                        StrokeThickness="1.5"
-                        StrokeLineCap="Round"
-                        StrokeJoin="Round"
+                        StrokeThickness="2"
+                        StrokeLineCap="Square"
+                        StrokeJoin="Miter"
                         Fill="Transparent" />
-                </Viewbox>
+                  <Path Data="M16,7 L11,7 L11,2"
+                        Stroke="#7A8498"
+                        StrokeThickness="2"
+                        StrokeLineCap="Square"
+                        StrokeJoin="Miter"
+                        Fill="Transparent" />
+                  <Path Data="M2,11 L7,11 L7,16"
+                        Stroke="#7A8498"
+                        StrokeThickness="2"
+                        StrokeLineCap="Square"
+                        StrokeJoin="Miter"
+                        Fill="Transparent" />
+                  <Path Data="M16,11 L11,11 L11,16"
+                        Stroke="#7A8498"
+                        StrokeThickness="2"
+                        StrokeLineCap="Square"
+                        StrokeJoin="Miter"
+                        Fill="Transparent" />
+                </Canvas>
               </Button>
             </Grid>
 
