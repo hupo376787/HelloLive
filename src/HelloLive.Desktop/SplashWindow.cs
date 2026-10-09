@@ -146,6 +146,42 @@ public sealed class SplashWindow : Window
         };
         _closeButton.Click += (_, _) => Close();
 
+        var topSection = new StackPanel
+        {
+            Spacing = 0,
+            Children =
+            {
+                header,
+                new Border
+                {
+                    Height = 1,
+                    Margin = new Thickness(0, 20, 0, 0),
+                    Background = new SolidColorBrush(Color.Parse("#FFE3E6F0"))
+                }
+            }
+        };
+
+        var progressSection = new StackPanel
+        {
+            Spacing = 12,
+            VerticalAlignment = VerticalAlignment.Bottom,
+            Children =
+            {
+                statusGrid,
+                _progressBar,
+                _detailText,
+                _closeButton
+            }
+        };
+
+        var rootGrid = new Grid
+        {
+            RowDefinitions = new RowDefinitions("Auto,*,Auto")
+        };
+        rootGrid.Children.Add(topSection);
+        Grid.SetRow(progressSection, 2);
+        rootGrid.Children.Add(progressSection);
+
         Content = new Border
         {
             Margin = new Thickness(2),
@@ -154,24 +190,7 @@ public sealed class SplashWindow : Window
             Background = new SolidColorBrush(Color.Parse("#FFF9FAFE")),
             BorderBrush = new SolidColorBrush(Color.Parse("#337C3AED")),
             BorderThickness = new Thickness(1),
-            Child = new StackPanel
-            {
-                Spacing = 12,
-                Children =
-                {
-                    header,
-                    new Border
-                    {
-                        Height = 1,
-                        Margin = new Thickness(0, 8, 0, 30),
-                        Background = new SolidColorBrush(Color.Parse("#FFE3E6F0"))
-                    },
-                    statusGrid,
-                    _progressBar,
-                    _detailText,
-                    _closeButton
-                }
-            }
+            Child = rootGrid
         };
     }
 
