@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform;
+using Avalonia.Threading;
 using HelloLive.Core.Services.Monitoring;
 using HelloLive.Core.Services.Settings;
 using HelloLive.Core.Sites;
@@ -130,24 +131,26 @@ public partial class App : Application
 
             var toolInfo = ffmpegInstaller.GetToolInfo();
             var videoRepair = new StartupVideoRepairService();
-            var repairSummary = await videoRepair.ScanAndRepairAsync(
-                recorder.DownloadRoot,
-                toolInfo.FfmpegPath,
-                toolInfo.FfprobePath,
-                progress =>
-                {
-                    var fraction = progress.TotalCount > 0
-                        ? Math.Clamp(
-                            progress.ProcessedCount / (double)progress.TotalCount,
-                            0d,
-                            1d)
-                        : 1d;
+            var repairSummary = await Task.Run(
+                () => videoRepair.ScanAndRepairAsync(
+                    recorder.DownloadRoot,
+                    toolInfo.FfmpegPath,
+                    toolInfo.FfprobePath,
+                    progress =>
+                    {
+                        var fraction = progress.TotalCount > 0
+                            ? Math.Clamp(
+                                progress.ProcessedCount / (double)progress.TotalCount,
+                                0d,
+                                1d)
+                            : 1d;
 
-                    splash.SetProgress(
-                        32d + 20d * fraction,
-                        "正在检查历史录像…",
-                        progress.Message);
-                });
+                        Dispatcher.UIThread.Post(() =>
+                            splash.SetProgress(
+                                32d + 20d * fraction,
+                                "正在检查历史录像…",
+                                progress.Message));
+                    }));
 
             var repairDetail = repairSummary.SkippedBecauseFfmpegMissing
                 ? $"发现 {repairSummary.TotalCount} 个录像文件；未找到 EXE 目录中的 FFmpeg/FFprobe，已跳过修复"
