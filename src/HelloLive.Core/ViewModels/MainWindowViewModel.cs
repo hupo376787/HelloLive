@@ -1139,6 +1139,9 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
     public void AddRemoteLog(string message) => AddLog(message);
 
+    public void AddBackgroundLog(string message)
+        => Dispatcher.UIThread.Post(() => AddLog(message));
+
     public void SetRemoteApiStatusText(string text)
         => RemoteApiStatusText = string.IsNullOrWhiteSpace(text)
             ? "远程控制服务器未启动"
