@@ -33,7 +33,7 @@ internal sealed class StartupVideoRepairService
             .ToArray();
 
         if (files.Length == 0)
-            return new StartupVideoRepairSummary(0, 0, 0, 0, false);
+            return new StartupVideoRepairSummary(0, 0, 0, 0, 0, false);
 
         if (string.IsNullOrWhiteSpace(ffmpegPath)
             || string.IsNullOrWhiteSpace(ffprobePath)
