@@ -846,7 +846,15 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     }
 
     private async Task StopMonitoringAsync()
-        => await _coordinator.StopAsync();
+    {
+        await _coordinator.StopAsync();
+
+        // Recorder normally publishes IsRecording=false for every completed session.
+        // Reconcile the UI explicitly as well so a queued/delayed recorder event can
+        // never leave a stale "正在录制" badge after monitoring has stopped.
+        foreach (var target in Monitors.Where(x => x.IsRecording))
+            ApplyStoppedRecordingState(target, "监控已停止，录像已结束");
+    }
 
     private async Task InstallChromiumAsync()
     {
@@ -1120,13 +1128,54 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
                 && !target.IsEnabled)
             {
                 _lastConfirmedLiveStates.Remove(target.Id);
-                _ = _coordinator.StopRecordingAsync(target.Id);
+                _ = StopRecordingAndResetAsync(target);
             }
 
             RefreshCoordinatorState();
             RaiseMetricsChanged();
             _ = SaveMonitorsAsync();
         }
+    }
+
+    private async Task StopRecordingAndResetAsync(
+        LiveMonitorTarget target)
+    {
+        try
+        {
+            await _coordinator.StopRecordingAsync(target.Id);
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                // The item might have been removed while the recorder was closing.
+                if (!Monitors.Contains(target))
+                    return;
+
+                if (target.IsRecording)
+                    ApplyStoppedRecordingState(target, "监控项已停用，录像已结束");
+            });
+        }
+        catch (Exception ex)
+        {
+            Dispatcher.UIThread.Post(() =>
+                AddLog($"{target.DisplayName}：停止录像失败 - {ex.Message}"));
+        }
+    }
+
+    private static void ApplyStoppedRecordingState(
+        LiveMonitorTarget target,
+        string message)
+    {
+        var fileName = target.RecordingFileName;
+        var status = string.IsNullOrWhiteSpace(fileName)
+            ? message
+            : $"{message}：{fileName}";
+
+        target.ApplyRecordingState(new LiveRecordingState(
+            target.Id,
+            false,
+            target.RecordingFilePath,
+            status,
+            DateTimeOffset.Now));
     }
 
     private void RefreshCoordinatorState()
