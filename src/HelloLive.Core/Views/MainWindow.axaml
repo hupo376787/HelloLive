@@ -875,12 +875,15 @@
           </Grid>
         </Border>
 
-        <Button Width="34"
+        <Button Grid.Column="0"
+                Grid.ColumnSpan="2"
+                Width="34"
                 Height="34"
                 Padding="0"
                 Margin="0,19,27,0"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Top"
+                Panel.ZIndex="10"
                 Background="Transparent"
                 IsVisible="{Binding IsMonitorPanelVisible}"
                 Command="{Binding ToggleMonitorGridCommand}"
