@@ -475,19 +475,46 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     public string MonitorPanelButtonText => IsMonitorPanelVisible ? "隐藏监控列表" : "显示监控列表";
     public string DownloadRoot => _coordinator.DownloadRoot;
 
-    public async Task InitializeAsync()
+    public async Task InitializeAsync(
+        Action<double, string, string>? startupProgress = null)
     {
+        startupProgress?.Invoke(
+            0d,
+            "正在检查浏览器…",
+            "检测 EXE 目录中的 Chrome for Testing");
+
         var path = await _browser.FindInstalledChromiumPathAsync();
         BrowserStatusText = string.IsNullOrWhiteSpace(path)
             ? $"未发现 Chromium，可点击安装。安装目录：{_browser.PreferredChromiumInstallDirectory}"
             : $"Chromium：{path}";
 
+        startupProgress?.Invoke(
+            0.40d,
+            "正在检查 FFmpeg…",
+            "检测 HLS 录像所需的 FFmpeg 可执行文件");
+
         RefreshFfmpegStatus();
+
+        startupProgress?.Invoke(
+            0.70d,
+            "正在恢复监控状态…",
+            $"已读取 {Monitors.Count} 个监控对象，正在应用启动策略");
 
         AddLog($"已加载 {Monitors.Count} 个监控对象。后台轮询与单项检查固定使用无头 Chromium，当前最大并发页面数：{MaxConcurrentPages}。");
 
         if (AutoStartMonitoring && Monitors.Any(x => x.IsEnabled))
+        {
+            startupProgress?.Invoke(
+                0.85d,
+                "正在启动监控…",
+                $"自动启动已启用，准备监控 {Monitors.Count(x => x.IsEnabled)} 个对象");
             await StartMonitoringAsync();
+        }
+
+        startupProgress?.Invoke(
+            1d,
+            "监控状态已就绪",
+            $"已恢复 {Monitors.Count} 个监控对象");
     }
 
     public async Task OpenBrowserAsync(string? input = null)
