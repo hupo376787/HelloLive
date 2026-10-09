@@ -82,26 +82,6 @@ internal static class FlvStreamWriter
             var tagType = tagHeader[0] & 0x1F;
             var isMediaTag = tagType is 8 or 9;
 
-            if (isMediaTag && baseTimestamp is null)
-                baseTimestamp = originalTimestamp;
-
-            uint normalizedTimestamp = baseTimestamp is { } start
-                ? NormalizeTimestamp(originalTimestamp, start)
-                : 0u;
-
-            // FLV DTS should normally be monotonic. If the upstream stream has a tiny
-            // backward jump, do not let a player interpret it as another huge duration.
-            if (isMediaTag
-                && normalizedTimestamp + 5000 < lastNormalizedTimestamp)
-            {
-                normalizedTimestamp = lastNormalizedTimestamp;
-            }
-
-            if (isMediaTag)
-                lastNormalizedTimestamp = Math.Max(lastNormalizedTimestamp, normalizedTimestamp);
-
-            WriteTimestamp(tagHeader, normalizedTimestamp);
-
             byte[]? rented = null;
             try
             {
@@ -126,6 +106,42 @@ internal static class FlvStreamWriter
                             "filesize");
                     }
                 }
+
+                // Do not use codec configuration tags as the timestamp origin.
+                // Kuaishou/Douyin FLV commonly starts with AVC/AAC sequence headers at
+                // timestamp 0, while the first real frame still carries the broadcaster's
+                // long-running upstream timestamp (for example 55,877,535 ms). If the
+                // sequence header becomes the base, the local clip appears many hours
+                // long even though it only contains a few minutes of media.
+                var payload = rented is null
+                    ? ReadOnlySpan<byte>.Empty
+                    : rented.AsSpan(0, dataSize);
+                var isTimestampAnchor =
+                    isMediaTag && IsActualMediaPayload(tagType, payload);
+
+                if (isTimestampAnchor && baseTimestamp is null)
+                    baseTimestamp = originalTimestamp;
+
+                uint normalizedTimestamp = baseTimestamp is { } start
+                    ? NormalizeTimestamp(originalTimestamp, start)
+                    : 0u;
+
+                // FLV DTS should normally be monotonic. If the upstream stream has a tiny
+                // backward jump, do not let a player interpret it as another huge duration.
+                if (isTimestampAnchor
+                    && normalizedTimestamp + 5000 < lastNormalizedTimestamp)
+                {
+                    normalizedTimestamp = lastNormalizedTimestamp;
+                }
+
+                if (isTimestampAnchor)
+                {
+                    lastNormalizedTimestamp = Math.Max(
+                        lastNormalizedTimestamp,
+                        normalizedTimestamp);
+                }
+
+                WriteTimestamp(tagHeader, normalizedTimestamp);
 
                 await ReadExactlyAsync(
                     input,
@@ -157,6 +173,49 @@ internal static class FlvStreamWriter
         }
 
         await output.FlushAsync();
+    }
+
+    private static bool IsActualMediaPayload(
+        int tagType,
+        ReadOnlySpan<byte> payload)
+    {
+        if (payload.IsEmpty)
+            return false;
+
+        if (tagType == 8)
+        {
+            // SoundFormat 10 = AAC. AACPacketType 0 is AudioSpecificConfig
+            // (sequence header); 1 is raw AAC media.
+            var soundFormat = (payload[0] >> 4) & 0x0F;
+            if (soundFormat == 10)
+                return payload.Length >= 2 && payload[1] == 1;
+
+            return true;
+        }
+
+        if (tagType == 9)
+        {
+            var first = payload[0];
+
+            // Enhanced RTMP/FLV video header. PacketType 0 is SequenceStart;
+            // coded-frame packet types are 1 and 3.
+            if ((first & 0x80) != 0)
+            {
+                var packetType = first & 0x0F;
+                return packetType is 1 or 3;
+            }
+
+            var codecId = first & 0x0F;
+
+            // AVC (7) and commonly used legacy HEVC (12) both carry a packet-type
+            // byte: 0 = sequence header, 1 = coded media, 2 = end of sequence.
+            if (codecId is 7 or 12)
+                return payload.Length >= 2 && payload[1] == 1;
+
+            return true;
+        }
+
+        return false;
     }
 
     private static uint NormalizeTimestamp(uint timestamp, uint start)
