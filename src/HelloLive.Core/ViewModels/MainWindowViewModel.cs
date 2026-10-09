@@ -48,6 +48,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private double _monitorGridItemWidth = 340d;
     private string _pushPlusToken = string.Empty;
     private string _currentTask = "等待任务";
+    private LiveMonitorTarget? _currentStatusTarget;
     private string _browserStatusText = "尚未检查 Chromium";
     private bool _isChromiumInstalling;
     private bool _isChromiumInstallProgressVisible;
@@ -329,6 +330,12 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     {
         get => _currentTask;
         private set => SetProperty(ref _currentTask, value);
+    }
+
+    public LiveMonitorTarget? CurrentStatusTarget
+    {
+        get => _currentStatusTarget;
+        private set => SetProperty(ref _currentStatusTarget, value);
     }
 
     public string BrowserStatusText
@@ -794,6 +801,10 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         _loadedAvatarUrls.Remove(target.Id);
         _lastConfirmedLiveStates.Remove(target.Id);
         target.PropertyChanged -= Target_PropertyChanged;
+
+        if (ReferenceEquals(CurrentStatusTarget, target))
+            CurrentStatusTarget = null;
+
         Monitors.Remove(target);
         await SaveMonitorsAsync();
         RefreshCoordinatorState();
@@ -962,6 +973,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             if (target is null)
                 return;
 
+            CurrentStatusTarget = target;
             target.ApplyResult(result);
             _ = LoadMonitorAvatarAsync(target);
             HandleLiveTransitionForPushPlus(target, result);
