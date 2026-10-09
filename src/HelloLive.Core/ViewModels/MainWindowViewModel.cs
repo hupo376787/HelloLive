@@ -678,9 +678,26 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         AddLog($"已修改作者信息：{target.DisplayName}。");
 
         if ((urlChanged || useAutoDisplayName) && target.IsEnabled)
-            await _coordinator.CheckOneAsync(target.Id);
+        {
+            target.StatusMessage = "作者信息已保存，正在后台重新获取作者信息";
+            _ = RecheckMonitorAfterEditAsync(target.Id, target.DisplayName);
+        }
 
         return null;
+    }
+
+    private async Task RecheckMonitorAfterEditAsync(
+        string targetId,
+        string displayName)
+    {
+        try
+        {
+            await _coordinator.CheckOneAsync(targetId);
+        }
+        catch (Exception ex)
+        {
+            AddLog($"{displayName}：修改作者信息后的后台检查失败 - {ex.Message}");
+        }
     }
 
     private async Task RemoveMonitorAsync(LiveMonitorTarget? target)
