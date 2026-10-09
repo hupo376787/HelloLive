@@ -241,8 +241,8 @@
                 <TextBlock Text="{Binding MonitoringStatusText}"
                            FontSize="17"
                            FontWeight="SemiBold" />
-                <TextBlock Text="{Binding CurrentTask}"
-                           TextWrapping="Wrap" />
+                <controls:EmojiTextBlock Text="{Binding CurrentTask}"
+                                         FontSize="14" />
                 <TextBlock Classes="caption"
                            Text="{Binding ConnectionText}"
                            TextWrapping="Wrap" />
@@ -321,11 +321,9 @@
                         <Grid ColumnDefinitions="*,Auto"
                               ColumnSpacing="8">
                           <StackPanel>
-                            <TextBlock Text="{Binding DisplayName}"
-                                       FontFamily="Segoe UI Emoji,Microsoft YaHei UI,Segoe UI"
-                                       FontSize="16"
-                                       FontWeight="SemiBold"
-                                       TextTrimming="CharacterEllipsis" />
+                            <controls:EmojiTextBlock Text="{Binding DisplayName}"
+                                                     FontSize="16"
+                                                     FontWeight="SemiBold" />
                             <TextBlock Classes="caption"
                                        Text="{Binding AuthorId, StringFormat='作者ID：{0}'}"
                                        TextTrimming="CharacterEllipsis" />
@@ -511,9 +509,9 @@
           <StackPanel Spacing="10">
             <TextBlock Text="远程控制" FontSize="18" FontWeight="SemiBold" />
             <TextBlock Text="{Binding MonitoringStatusText}" FontWeight="Medium" />
-            <TextBlock Classes="caption"
-                       Text="{Binding CurrentTask}"
-                       TextWrapping="Wrap" />
+            <controls:EmojiTextBlock Text="{Binding CurrentTask}"
+                                     FontSize="12"
+                                     Foreground="{DynamicResource RemoteCaptionBrush}" />
             <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
               <Button Classes="action coral"
                       Content="开始监控"
@@ -569,11 +567,9 @@
                     <StackPanel Spacing="7">
                       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                         <StackPanel>
-                          <TextBlock Text="{Binding DisplayName}"
-                                     FontFamily="Segoe UI Emoji,Microsoft YaHei UI,Segoe UI"
-                                     FontSize="15"
-                                     FontWeight="SemiBold"
-                                     TextTrimming="CharacterEllipsis" />
+                          <controls:EmojiTextBlock Text="{Binding DisplayName}"
+                                                   FontSize="15"
+                                                   FontWeight="SemiBold" />
                           <TextBlock Classes="caption"
                                      Text="{Binding AuthorId, StringFormat='作者ID：{0}'}"
                                      TextTrimming="CharacterEllipsis" />
