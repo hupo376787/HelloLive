@@ -559,7 +559,7 @@
                         Stroke="{DynamicResource TextPrimaryColor}"
                         StrokeThickness="1.6"
                         StrokeLineCap="Round"
-                        StrokeLineJoin="Round"
+                        StrokeJoin="Round"
                         Fill="Transparent" />
                 </Viewbox>
               </Button>
@@ -741,7 +741,7 @@
                         Stroke="{DynamicResource TextPrimaryColor}"
                         StrokeThickness="1.6"
                         StrokeLineCap="Round"
-                        StrokeLineJoin="Round"
+                        StrokeJoin="Round"
                         Fill="Transparent" />
                 </Viewbox>
               </Button>
@@ -937,7 +937,7 @@
                        MinHeight="42"
                        Padding="12,0"
                        VerticalContentAlignment="Center"
-                       Watermark="作者昵称（留空则自动获取）"
+                       PlaceholderText="作者昵称（留空则自动获取）"
                        KeyDown="EditUrlTextBox_KeyDown" />
             </StackPanel>
 
@@ -947,7 +947,7 @@
                        MinHeight="42"
                        Padding="12,0"
                        VerticalContentAlignment="Center"
-                       Watermark="https://..."
+                       PlaceholderText="https://..."
                        KeyDown="EditUrlTextBox_KeyDown" />
             </StackPanel>
 
@@ -957,7 +957,7 @@
                        MinHeight="42"
                        Padding="12,0"
                        VerticalContentAlignment="Center"
-                       Watermark="https://live.kuaishou.com/profile/..."
+                       PlaceholderText="https://live.kuaishou.com/profile/..."
                        KeyDown="EditUrlTextBox_KeyDown" />
             </StackPanel>
 
