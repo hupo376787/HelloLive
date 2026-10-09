@@ -547,18 +547,21 @@
                            TextWrapping="Wrap" />
               </StackPanel>
               <Button Grid.Column="1"
-                      Width="38"
-                      Height="38"
-                      Padding="0"
+                      Width="36"
+                      Height="36"
+                      Padding="8"
                       Margin="8,0,0,0"
                       Background="Transparent"
                       Command="{Binding ToggleMonitorGridCommand}"
                       ToolTip.Tip="{Binding MonitorGridToggleToolTip}">
-                <TextBlock Text="{Binding MonitorGridToggleIcon}"
-                           FontSize="23"
-                           FontWeight="SemiBold"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center" />
+                <Viewbox Width="18" Height="18" Stretch="Uniform">
+                  <Path Data="M2,7 L2,2 L7,2 M2,2 L7,7 M14,9 L14,14 L9,14 M14,14 L9,9"
+                        Stroke="{DynamicResource TextPrimaryColor}"
+                        StrokeThickness="1.6"
+                        StrokeLineCap="Round"
+                        StrokeLineJoin="Round"
+                        Fill="Transparent" />
+                </Viewbox>
               </Button>
             </Grid>
 
@@ -648,6 +651,7 @@
 
                         <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                           <TextBlock Text="{Binding DisplayName}"
+                                     FontFamily="Segoe UI Emoji,Microsoft YaHei UI,Segoe UI"
                                      FontSize="16"
                                      FontWeight="SemiBold"
                                      TextTrimming="CharacterEllipsis" />
@@ -725,18 +729,21 @@
                            TextWrapping="Wrap" />
               </StackPanel>
               <Button Grid.Column="1"
-                      Width="38"
-                      Height="38"
-                      Padding="0"
+                      Width="36"
+                      Height="36"
+                      Padding="8"
                       Margin="8,0,0,0"
                       Background="Transparent"
                       Command="{Binding ToggleMonitorGridCommand}"
                       ToolTip.Tip="{Binding MonitorGridToggleToolTip}">
-                <TextBlock Text="{Binding MonitorGridToggleIcon}"
-                           FontSize="23"
-                           FontWeight="SemiBold"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center" />
+                <Viewbox Width="18" Height="18" Stretch="Uniform">
+                  <Path Data="M7,2 L7,7 L2,7 M7,7 L2,2 M9,14 L9,9 L14,9 M9,9 L14,14"
+                        Stroke="{DynamicResource TextPrimaryColor}"
+                        StrokeThickness="1.6"
+                        StrokeLineCap="Round"
+                        StrokeLineJoin="Round"
+                        Fill="Transparent" />
+                </Viewbox>
               </Button>
             </Grid>
 
@@ -833,6 +840,7 @@
 
                         <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                           <TextBlock Text="{Binding DisplayName}"
+                                     FontFamily="Segoe UI Emoji,Microsoft YaHei UI,Segoe UI"
                                      FontSize="16"
                                      FontWeight="SemiBold"
                                      TextTrimming="CharacterEllipsis" />
