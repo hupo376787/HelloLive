@@ -464,7 +464,19 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         }
     }
 
-    public string RemoteApiToken => _remoteApiToken;
+    public string RemoteApiToken
+    {
+        get => _remoteApiToken;
+        set
+        {
+            var normalized = (value ?? string.Empty).Trim();
+            if (!SetProperty(ref _remoteApiToken, normalized))
+                return;
+
+            _settings.RemoteApiToken = normalized;
+            PersistSettingsSoon();
+        }
+    }
 
     public string RemoteApiStatusText
     {
