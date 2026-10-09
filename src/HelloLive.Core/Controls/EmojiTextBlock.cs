@@ -137,7 +137,30 @@ public sealed class EmojiTextBlock : WrapPanel
         if (buffer.Length == 0)
             return;
 
-        Children.Add(CreateTextBlock(buffer.ToString()));
+        // WrapPanel can only wrap between children. Keep normal text in small
+        // grapheme chunks so long logs/status text can still wrap naturally
+        // around browser-rendered emoji images.
+        var text = buffer.ToString();
+        var enumerator = StringInfo.GetTextElementEnumerator(text);
+        var chunk = new StringBuilder();
+        var elementCount = 0;
+
+        while (enumerator.MoveNext())
+        {
+            chunk.Append(enumerator.GetTextElement());
+            elementCount++;
+
+            if (elementCount < 12)
+                continue;
+
+            Children.Add(CreateTextBlock(chunk.ToString()));
+            chunk.Clear();
+            elementCount = 0;
+        }
+
+        if (chunk.Length > 0)
+            Children.Add(CreateTextBlock(chunk.ToString()));
+
         buffer.Clear();
     }
 
