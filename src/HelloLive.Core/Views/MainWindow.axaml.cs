@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
+using Avalonia.Interactivity;
 using Avalonia.Threading;
 using HelloLive.Core.Models;
 using HelloLive.Core.ViewModels;
@@ -14,12 +15,29 @@ public partial class MainWindow : Window
     private bool _shutdownInProgress;
     private LiveMonitorTarget? _editingUrlTarget;
 
+    private const double ResizeBorderThickness = 7;
+
     public event EventHandler? MinimizeToTrayRequested;
 
     public MainWindow()
     {
         InitializeComponent();
         Closing += MainWindow_Closing;
+
+        // The window uses WindowDecorations=None, so the native resize border no
+        // longer supplies hit testing/cursors for us. Handle the outer 7 px here
+        // and delegate the actual resize operation back to Avalonia.
+        AddHandler(
+            PointerMovedEvent,
+            Window_PointerMovedForResize,
+            RoutingStrategies.Tunnel,
+            handledEventsToo: true);
+        AddHandler(
+            PointerPressedEvent,
+            Window_PointerPressedForResize,
+            RoutingStrategies.Tunnel,
+            handledEventsToo: true);
+        PointerExited += Window_PointerExitedForResize;
     }
 
     private void MainWindow_Closing(
@@ -31,6 +49,87 @@ public partial class MainWindow : Window
 
         e.Cancel = true;
         ShowCloseConfirmation();
+    }
+
+    private void Window_PointerMovedForResize(
+        object? sender,
+        PointerEventArgs e)
+    {
+        if (WindowState == WindowState.Maximized || !CanResize)
+        {
+            Cursor = Cursor.Default;
+            return;
+        }
+
+        var edge = GetResizeEdge(e.GetPosition(this));
+        Cursor = edge switch
+        {
+            WindowEdge.NorthWest => new Cursor(StandardCursorType.TopLeftCorner),
+            WindowEdge.North => new Cursor(StandardCursorType.SizeNorthSouth),
+            WindowEdge.NorthEast => new Cursor(StandardCursorType.TopRightCorner),
+            WindowEdge.West => new Cursor(StandardCursorType.SizeWestEast),
+            WindowEdge.East => new Cursor(StandardCursorType.SizeWestEast),
+            WindowEdge.SouthWest => new Cursor(StandardCursorType.BottomLeftCorner),
+            WindowEdge.South => new Cursor(StandardCursorType.SizeNorthSouth),
+            WindowEdge.SouthEast => new Cursor(StandardCursorType.BottomRightCorner),
+            _ => Cursor.Default
+        };
+    }
+
+    private void Window_PointerPressedForResize(
+        object? sender,
+        PointerPressedEventArgs e)
+    {
+        if (WindowState == WindowState.Maximized
+            || !CanResize
+            || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            return;
+        }
+
+        var edge = GetResizeEdge(e.GetPosition(this));
+        if (edge is not { } resizeEdge)
+            return;
+
+        BeginResizeDrag(resizeEdge, e);
+        e.Handled = true;
+    }
+
+    private void Window_PointerExitedForResize(
+        object? sender,
+        PointerEventArgs e)
+        => Cursor = Cursor.Default;
+
+    private WindowEdge? GetResizeEdge(Avalonia.Point position)
+    {
+        var width = Bounds.Width;
+        var height = Bounds.Height;
+        if (width <= 0 || height <= 0)
+            return null;
+
+        var left = position.X <= ResizeBorderThickness;
+        var right = position.X >= width - ResizeBorderThickness;
+        var top = position.Y <= ResizeBorderThickness;
+        var bottom = position.Y >= height - ResizeBorderThickness;
+
+        if (top && left)
+            return WindowEdge.NorthWest;
+        if (top && right)
+            return WindowEdge.NorthEast;
+        if (bottom && left)
+            return WindowEdge.SouthWest;
+        if (bottom && right)
+            return WindowEdge.SouthEast;
+        if (top)
+            return WindowEdge.North;
+        if (bottom)
+            return WindowEdge.South;
+        if (left)
+            return WindowEdge.West;
+        if (right)
+            return WindowEdge.East;
+
+        return null;
     }
 
     private void TitleBar_PointerPressed(object? sender, PointerPressedEventArgs e)
