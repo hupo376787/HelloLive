@@ -176,28 +176,48 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
             };
 
             var navigationBudget = Math.Clamp(options.CheckTimeoutSeconds * 450, 3000, 12000);
-            try
+
+            // Kuaishou's public www profile page exposes the actual account profile
+            // without requiring login. Load it first so /userinfo/byid can bind the
+            // nickname/avatar/originUserId to this principalId before the live page
+            // starts loading works/recommendations that contain unrelated authors.
+            if (adapter.Id.Equals("kuaishou", StringComparison.OrdinalIgnoreCase)
+                && TryBuildKuaishouPublicProfileUrl(
+                    normalizedUrl,
+                    out var publicProfileUrl))
             {
-                await page.GotoAsync(normalizedUrl, new PageGotoOptions
+                await NavigateBestEffortAsync(
+                    page,
+                    publicProfileUrl,
+                    Math.Min(navigationBudget, 8000));
+
+                if (string.IsNullOrWhiteSpace(authorIdFromApi))
                 {
-                    WaitUntil = WaitUntilState.DOMContentLoaded,
-                    Timeout = navigationBudget
-                });
+                    await Task.WhenAny(
+                        authorIdentityTcs.Task,
+                        Task.Delay(TimeSpan.FromMilliseconds(1800), cancellationToken));
+                }
+
+                await MergeAuthorMetadataFromDomAsync(
+                    page,
+                    name => authorNameFromApi ??= name,
+                    avatar => avatarUrlFromApi ??= avatar);
             }
-            catch (System.TimeoutException)
+
+            // Keep the original live/profile URL for stream discovery. This preserves
+            // the proven Kuaishou recording path while author metadata comes from the
+            // public www profile/API above.
+            if (!streamTcs.Task.IsCompleted
+                || !adapter.Id.Equals("kuaishou", StringComparison.OrdinalIgnoreCase))
             {
-                // 页面可能已经执行了足够多的 JS；继续等待网络中的直播地址。
-            }
-            catch (PlaywrightException ex) when (ex.Message.Contains("Timeout", StringComparison.OrdinalIgnoreCase))
-            {
-                // Playwright 超时同样继续等待网络中的直播地址。
+                await NavigateBestEffortAsync(
+                    page,
+                    normalizedUrl,
+                    navigationBudget);
             }
 
             resolvedPageUrl = page.Url;
 
-            // Even when the author is offline, Kuaishou usually exposes the profile
-            // nickname in the page title / OG metadata and the avatar URL in the DOM.
-            // Capture that immediately, then refresh it once more before returning.
             await MergeAuthorMetadataFromDomAsync(
                 page,
                 name => authorNameFromApi ??= name,
@@ -288,6 +308,44 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
         finally
         {
             try { await page.CloseAsync(); } catch { }
+        }
+    }
+
+    private static bool TryBuildKuaishouPublicProfileUrl(
+        string sourceUrl,
+        out string publicProfileUrl)
+    {
+        publicProfileUrl = string.Empty;
+        var principalId = LiveAuthorIdentityHelper.ExtractPageIdentifier(sourceUrl);
+        if (string.IsNullOrWhiteSpace(principalId))
+            return false;
+
+        publicProfileUrl =
+            $"https://www.kuaishou.com/profile/{Uri.EscapeDataString(principalId)}";
+        return true;
+    }
+
+    private static async Task NavigateBestEffortAsync(
+        IPage page,
+        string url,
+        int timeoutMilliseconds)
+    {
+        try
+        {
+            await page.GotoAsync(url, new PageGotoOptions
+            {
+                WaitUntil = WaitUntilState.DOMContentLoaded,
+                Timeout = timeoutMilliseconds
+            });
+        }
+        catch (System.TimeoutException)
+        {
+            // 页面通常已经执行了足够多的 JS；继续使用已产生的网络响应/DOM。
+        }
+        catch (PlaywrightException ex)
+            when (ex.Message.Contains("Timeout", StringComparison.OrdinalIgnoreCase))
+        {
+            // Playwright 导航超时同样保留当前页面状态继续解析。
         }
     }
 
