@@ -1054,7 +1054,19 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         Dispatcher.UIThread.Post(() =>
         {
             var target = Monitors.FirstOrDefault(x => x.Id == state.TargetId);
-            target?.ApplyRecordingState(state);
+            if (target is null)
+                return;
+
+            // A delayed "recording started" notification must not resurrect the
+            // recording badge after global monitoring was stopped or this item
+            // was disabled. Stop notifications are always accepted.
+            if (state.IsRecording
+                && (!_coordinator.IsRunning || !target.IsEnabled))
+            {
+                return;
+            }
+
+            target.ApplyRecordingState(state);
         });
     }
 
