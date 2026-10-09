@@ -285,6 +285,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
                 return;
 
             OnPropertyChanged(nameof(IsCompactMonitorPanelVisible));
+            OnPropertyChanged(nameof(IsMainWorkspaceVisible));
             OnPropertyChanged(nameof(MonitorGridToggleIcon));
             OnPropertyChanged(nameof(MonitorGridToggleToolTip));
         }
@@ -292,6 +293,9 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
     public bool IsCompactMonitorPanelVisible
         => IsMonitorPanelVisible && !IsMonitorGridExpanded;
+
+    public bool IsMainWorkspaceVisible
+        => !IsMonitorGridExpanded;
 
     public string MonitorGridToggleIcon
         => IsMonitorGridExpanded ? "⤡" : "⤢";
