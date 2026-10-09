@@ -41,6 +41,10 @@ public sealed class EmojiTextBlock : WrapPanel
             nameof(FontWeight),
             FontWeight.Normal);
 
+    public static readonly StyledProperty<IBrush?> ForegroundProperty =
+        AvaloniaProperty.Register<EmojiTextBlock, IBrush?>(
+            nameof(Foreground));
+
     static EmojiTextBlock()
     {
         TextProperty.Changed.AddClassHandler<EmojiTextBlock>(
@@ -48,6 +52,8 @@ public sealed class EmojiTextBlock : WrapPanel
         FontSizeProperty.Changed.AddClassHandler<EmojiTextBlock>(
             static (control, _) => control.Rebuild());
         FontWeightProperty.Changed.AddClassHandler<EmojiTextBlock>(
+            static (control, _) => control.Rebuild());
+        ForegroundProperty.Changed.AddClassHandler<EmojiTextBlock>(
             static (control, _) => control.Rebuild());
     }
 
@@ -73,6 +79,12 @@ public sealed class EmojiTextBlock : WrapPanel
     {
         get => GetValue(FontWeightProperty);
         set => SetValue(FontWeightProperty, value);
+    }
+
+    public IBrush? Foreground
+    {
+        get => GetValue(ForegroundProperty);
+        set => SetValue(ForegroundProperty, value);
     }
 
     private void Rebuild()
@@ -130,13 +142,20 @@ public sealed class EmojiTextBlock : WrapPanel
     }
 
     private TextBlock CreateTextBlock(string text)
-        => new()
+    {
+        var block = new TextBlock
         {
             Text = text,
             FontSize = FontSize,
             FontWeight = FontWeight,
             VerticalAlignment = VerticalAlignment.Center
         };
+
+        if (Foreground is not null)
+            block.Foreground = Foreground;
+
+        return block;
+    }
 
     private async Task LoadEmojiAsync(
         Border holder,
