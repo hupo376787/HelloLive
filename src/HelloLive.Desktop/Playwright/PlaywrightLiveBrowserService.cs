@@ -157,10 +157,15 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
                             body,
                             out var stream))
                     {
+                        // Do not snapshot the current fallback nickname into the
+                        // stream object. Kuaishou may return the authoritative
+                        // /live_api/baseuser/userinfo/byid response slightly later.
+                        // Keeping AuthorName owned by the platform stream parser lets the
+                        // final result use the newest author metadata instead of a stale
+                        // recommendation/DOM name captured when the stream first appeared.
                         streamTcs.TrySetResult(stream with
                         {
-                            RefererUrl = page.Url,
-                            AuthorName = authorNameFromApi
+                            RefererUrl = page.Url
                         });
                     }
                 }
@@ -215,7 +220,12 @@ public sealed class PlaywrightLiveBrowserService : ILiveBrowserService
                 {
                     await Task.WhenAny(
                         authorIdentityTcs.Task,
-                        Task.Delay(TimeSpan.FromMilliseconds(900), cancellationToken));
+                        Task.Delay(
+                            TimeSpan.FromMilliseconds(
+                                adapter.Id.Equals("kuaishou", StringComparison.OrdinalIgnoreCase)
+                                    ? 1500
+                                    : 900),
+                            cancellationToken));
                 }
 
                 await MergeAuthorMetadataFromDomAsync(
