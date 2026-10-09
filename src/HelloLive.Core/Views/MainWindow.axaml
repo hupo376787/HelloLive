@@ -541,50 +541,15 @@
                 Classes="card"
                 IsVisible="{Binding IsCompactMonitorPanelVisible}">
           <Grid RowDefinitions="Auto,*">
-            <Grid ColumnDefinitions="*,Auto">
-              <StackPanel>
+            <Grid>
+              <StackPanel Margin="0,0,44,0">
                 <TextBlock Text="监控列表" FontSize="19" FontWeight="SemiBold" />
                 <TextBlock Classes="caption"
                            Text="作者头像、身份、直播状态与录像状态集中显示；双击打开录像文件夹，右键打开操作菜单。"
                            Margin="0,3,0,0"
                            TextWrapping="Wrap" />
               </StackPanel>
-              <Button Grid.Column="1"
-                      Width="34"
-                      Height="34"
-                      Padding="0"
-                      Margin="8,0,0,0"
-                      Background="Transparent"
-                      Command="{Binding ToggleMonitorGridCommand}"
-                      ToolTip.Tip="{Binding MonitorGridToggleToolTip}">
-                <Canvas Width="18"
-                        Height="18">
-                  <Path Data="M7,2 L2,2 L2,7"
-                        Stroke="#7A8498"
-                        StrokeThickness="2"
-                        StrokeLineCap="Square"
-                        StrokeJoin="Miter"
-                        Fill="Transparent" />
-                  <Path Data="M11,2 L16,2 L16,7"
-                        Stroke="#7A8498"
-                        StrokeThickness="2"
-                        StrokeLineCap="Square"
-                        StrokeJoin="Miter"
-                        Fill="Transparent" />
-                  <Path Data="M2,11 L2,16 L7,16"
-                        Stroke="#7A8498"
-                        StrokeThickness="2"
-                        StrokeLineCap="Square"
-                        StrokeJoin="Miter"
-                        Fill="Transparent" />
-                  <Path Data="M16,11 L16,16 L11,16"
-                        Stroke="#7A8498"
-                        StrokeThickness="2"
-                        StrokeLineCap="Square"
-                        StrokeJoin="Miter"
-                        Fill="Transparent" />
-                </Canvas>
-              </Button>
+
             </Grid>
 
             <ListBox Grid.Row="1"
@@ -741,51 +706,15 @@
                 Classes="card"
                 IsVisible="{Binding IsMonitorGridExpanded}">
           <Grid RowDefinitions="Auto,*">
-            <Grid ColumnDefinitions="*,Auto"
-                  Margin="0,0,0,12">
-              <StackPanel>
+            <Grid Margin="0,0,0,12">
+              <StackPanel Margin="0,0,44,0">
                 <TextBlock Text="监控列表" FontSize="19" FontWeight="SemiBold" />
                 <TextBlock Classes="caption"
                            Text="网格模式：监控项按多列集中显示；双击打开录像文件夹，右键打开操作菜单。"
                            Margin="0,3,0,0"
                            TextWrapping="Wrap" />
               </StackPanel>
-              <Button Grid.Column="1"
-                      Width="34"
-                      Height="34"
-                      Padding="0"
-                      Margin="8,0,0,0"
-                      Background="Transparent"
-                      Command="{Binding ToggleMonitorGridCommand}"
-                      ToolTip.Tip="{Binding MonitorGridToggleToolTip}">
-                <Canvas Width="18"
-                        Height="18">
-                  <Path Data="M2,7 L7,7 L7,2"
-                        Stroke="#7A8498"
-                        StrokeThickness="2"
-                        StrokeLineCap="Square"
-                        StrokeJoin="Miter"
-                        Fill="Transparent" />
-                  <Path Data="M16,7 L11,7 L11,2"
-                        Stroke="#7A8498"
-                        StrokeThickness="2"
-                        StrokeLineCap="Square"
-                        StrokeJoin="Miter"
-                        Fill="Transparent" />
-                  <Path Data="M2,11 L7,11 L7,16"
-                        Stroke="#7A8498"
-                        StrokeThickness="2"
-                        StrokeLineCap="Square"
-                        StrokeJoin="Miter"
-                        Fill="Transparent" />
-                  <Path Data="M16,11 L11,11 L11,16"
-                        Stroke="#7A8498"
-                        StrokeThickness="2"
-                        StrokeLineCap="Square"
-                        StrokeJoin="Miter"
-                        Fill="Transparent" />
-                </Canvas>
-              </Button>
+
             </Grid>
 
             <ListBox x:Name="ExpandedMonitorList"
@@ -945,6 +874,77 @@
             </ListBox>
           </Grid>
         </Border>
+
+        <Button Width="34"
+                Height="34"
+                Padding="0"
+                Margin="0,19,27,0"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Background="Transparent"
+                IsVisible="{Binding IsMonitorPanelVisible}"
+                Command="{Binding ToggleMonitorGridCommand}"
+                ToolTip.Tip="{Binding MonitorGridToggleToolTip}">
+          <Grid Width="18" Height="18">
+            <Canvas Width="18"
+                    Height="18"
+                    IsVisible="{Binding IsCompactMonitorPanelVisible}">
+              <Path Data="M7,2 L2,2 L2,7"
+                    Stroke="#7A8498"
+                    StrokeThickness="2"
+                    StrokeLineCap="Square"
+                    StrokeJoin="Miter"
+                    Fill="Transparent" />
+              <Path Data="M11,2 L16,2 L16,7"
+                    Stroke="#7A8498"
+                    StrokeThickness="2"
+                    StrokeLineCap="Square"
+                    StrokeJoin="Miter"
+                    Fill="Transparent" />
+              <Path Data="M2,11 L2,16 L7,16"
+                    Stroke="#7A8498"
+                    StrokeThickness="2"
+                    StrokeLineCap="Square"
+                    StrokeJoin="Miter"
+                    Fill="Transparent" />
+              <Path Data="M16,11 L16,16 L11,16"
+                    Stroke="#7A8498"
+                    StrokeThickness="2"
+                    StrokeLineCap="Square"
+                    StrokeJoin="Miter"
+                    Fill="Transparent" />
+            </Canvas>
+
+            <Canvas Width="18"
+                    Height="18"
+                    IsVisible="{Binding IsMonitorGridExpanded}">
+              <Path Data="M2,7 L7,7 L7,2"
+                    Stroke="#7A8498"
+                    StrokeThickness="2"
+                    StrokeLineCap="Square"
+                    StrokeJoin="Miter"
+                    Fill="Transparent" />
+              <Path Data="M16,7 L11,7 L11,2"
+                    Stroke="#7A8498"
+                    StrokeThickness="2"
+                    StrokeLineCap="Square"
+                    StrokeJoin="Miter"
+                    Fill="Transparent" />
+              <Path Data="M2,11 L7,11 L7,16"
+                    Stroke="#7A8498"
+                    StrokeThickness="2"
+                    StrokeLineCap="Square"
+                    StrokeJoin="Miter"
+                    Fill="Transparent" />
+              <Path Data="M16,11 L11,11 L11,16"
+                    Stroke="#7A8498"
+                    StrokeThickness="2"
+                    StrokeLineCap="Square"
+                    StrokeJoin="Miter"
+                    Fill="Transparent" />
+            </Canvas>
+          </Grid>
+        </Button>
       </Grid>
 
       <!-- 修改作者信息：昵称、头像 URL 和监控 URL 使用同一风格弹窗集中编辑。 -->
