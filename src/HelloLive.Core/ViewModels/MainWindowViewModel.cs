@@ -45,6 +45,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private bool _isMonitoring;
     private bool _isMonitorPanelVisible;
     private bool _isMonitorGridExpanded;
+    private double _monitorGridItemWidth = 340d;
     private string _pushPlusToken = string.Empty;
     private string _currentTask = "等待任务";
     private string _browserStatusText = "尚未检查 Chromium";
@@ -296,6 +297,27 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
     public bool IsMainWorkspaceVisible
         => !IsMonitorGridExpanded;
+
+    public double MonitorGridItemWidth
+    {
+        get => _monitorGridItemWidth;
+        private set => SetProperty(ref _monitorGridItemWidth, value);
+    }
+
+    public void UpdateMonitorGridAvailableWidth(double availableWidth)
+    {
+        if (!double.IsFinite(availableWidth) || availableWidth <= 0)
+            return;
+
+        // Reserve a small amount for the vertical scrollbar/right breathing room.
+        // Then divide the real available width into as many ~320 px cells as fit.
+        // This keeps the grid responsive while avoiding a large unused strip at right.
+        var usableWidth = Math.Max(300d, availableWidth - 14d);
+        var columns = Math.Max(1, (int)Math.Floor(usableWidth / 315d));
+        columns = Math.Min(columns, 6);
+
+        MonitorGridItemWidth = Math.Floor((usableWidth / columns) * 10d) / 10d;
+    }
 
     public string MonitorGridToggleIcon
         => IsMonitorGridExpanded ? "⤡" : "⤢";
