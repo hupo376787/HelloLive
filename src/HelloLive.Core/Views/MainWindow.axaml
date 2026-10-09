@@ -555,8 +555,10 @@
                       Command="{Binding ToggleMonitorGridCommand}"
                       ToolTip.Tip="{Binding MonitorGridToggleToolTip}">
                 <Canvas Width="18"
-                        Height="18"
-                        RenderTransform="translate(-1.5px, -1.5px)">
+                        Height="18">
+                  <Canvas.RenderTransform>
+                    <TranslateTransform X="-1.5" Y="-1.5" />
+                  </Canvas.RenderTransform>
                   <Path Data="M7,2 L2,2 L2,7"
                         Stroke="#7A8498"
                         StrokeThickness="2"
@@ -757,8 +759,10 @@
                       Command="{Binding ToggleMonitorGridCommand}"
                       ToolTip.Tip="{Binding MonitorGridToggleToolTip}">
                 <Canvas Width="18"
-                        Height="18"
-                        RenderTransform="translate(-1.5px, -1.5px)">
+                        Height="18">
+                  <Canvas.RenderTransform>
+                    <TranslateTransform X="-1.5" Y="-1.5" />
+                  </Canvas.RenderTransform>
                   <Path Data="M2,7 L7,7 L7,2"
                         Stroke="#7A8498"
                         StrokeThickness="2"
