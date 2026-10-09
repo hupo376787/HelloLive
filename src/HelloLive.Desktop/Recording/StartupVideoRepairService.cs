@@ -21,7 +21,7 @@ internal sealed class StartupVideoRepairService
         if (string.IsNullOrWhiteSpace(downloadRoot)
             || !Directory.Exists(downloadRoot))
         {
-            return new StartupVideoRepairSummary(0, 0, 0, 0, false);
+            return new StartupVideoRepairSummary(0, 0, 0, 0, 0, false);
         }
 
         var files = Directory
@@ -50,13 +50,15 @@ internal sealed class StartupVideoRepairService
                 files.Length,
                 0,
                 0,
-                files.Length,
+                0,
+                0,
                 true);
         }
 
         var repaired = 0;
         var healthy = 0;
         var failed = 0;
+        var skippedActive = 0;
 
         for (var index = 0; index < files.Length; index++)
         {
@@ -69,6 +71,18 @@ internal sealed class StartupVideoRepairService
                 repaired,
                 failed,
                 $"正在检查录像 {index + 1}/{files.Length}：{Path.GetFileName(file)}"));
+
+            if (IsFileInUse(file))
+            {
+                skippedActive++;
+                progress?.Invoke(new StartupVideoRepairProgress(
+                    index + 1,
+                    files.Length,
+                    repaired,
+                    failed,
+                    $"跳过正在使用的录像：{Path.GetFileName(file)}"));
+                continue;
+            }
 
             try
             {
@@ -127,14 +141,36 @@ internal sealed class StartupVideoRepairService
             files.Length,
             repaired,
             failed,
-            $"录像检查完成：{files.Length} 个，修复 {repaired} 个，正常 {healthy} 个，失败 {failed} 个"));
+            $"录像检查完成：{files.Length} 个，修复 {repaired} 个，正常 {healthy} 个，跳过占用 {skippedActive} 个，失败 {failed} 个"));
 
         return new StartupVideoRepairSummary(
             files.Length,
             repaired,
             healthy,
             failed,
+            skippedActive,
             false);
+    }
+
+    private static bool IsFileInUse(string path)
+    {
+        try
+        {
+            using var stream = new FileStream(
+                path,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.None);
+            return false;
+        }
+        catch (IOException)
+        {
+            return true;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return true;
+        }
     }
 
     private static bool NeedsRepair(MediaProbe probe)
@@ -512,4 +548,5 @@ internal sealed record StartupVideoRepairSummary(
     int RepairedCount,
     int HealthyCount,
     int FailedCount,
+    int SkippedActiveCount,
     bool SkippedBecauseFfmpegMissing);
