@@ -26,6 +26,12 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
 
     private readonly ConcurrentDictionary<string, RecordingSession> _sessions =
         new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, Task> _compressionTasks =
+        new(StringComparer.OrdinalIgnoreCase);
+    private readonly SemaphoreSlim _compressionGate = new(1, 1);
+    private readonly CancellationTokenSource _compressionCancellation = new();
+    private readonly object _compressionOptionsSync = new();
+    private PostRecordingCompressionOptions _compressionOptions = new(false, false);
     private readonly HttpClient _httpClient;
     private bool _disposed;
 
@@ -54,6 +60,13 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
         cancellationToken.ThrowIfCancellationRequested();
         Directory.CreateDirectory(DownloadRoot);
         return Task.CompletedTask;
+    }
+
+    public void SetPostRecordingCompressionOptions(
+        PostRecordingCompressionOptions options)
+    {
+        lock (_compressionOptionsSync)
+            _compressionOptions = options;
     }
 
     public Task StartIfNeededAsync(
@@ -254,6 +267,289 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
             session.OutputPath,
             completionMessage,
             DateTimeOffset.Now));
+
+        QueuePostRecordingCompression(
+            target.DisplayName,
+            session.OutputPath);
+    }
+
+    private void QueuePostRecordingCompression(
+        string displayName,
+        string inputPath)
+    {
+        PostRecordingCompressionOptions options;
+        lock (_compressionOptionsSync)
+            options = _compressionOptions;
+
+        if (!options.Enabled
+            || _disposed
+            || string.IsNullOrWhiteSpace(inputPath))
+        {
+            return;
+        }
+
+        try
+        {
+            if (!File.Exists(inputPath)
+                || new FileInfo(inputPath).Length <= 0)
+            {
+                return;
+            }
+        }
+        catch
+        {
+            return;
+        }
+
+        var task = Task.Run(
+            () => CompressRecordingAsync(
+                displayName,
+                inputPath,
+                options,
+                _compressionCancellation.Token),
+            CancellationToken.None);
+
+        if (!_compressionTasks.TryAdd(inputPath, task))
+            return;
+
+        _ = task.ContinueWith(
+            _ => _compressionTasks.TryRemove(inputPath, out _),
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+    }
+
+    private async Task CompressRecordingAsync(
+        string displayName,
+        string inputPath,
+        PostRecordingCompressionOptions options,
+        CancellationToken cancellationToken)
+    {
+        await _compressionGate.WaitAsync(cancellationToken);
+        string? temporaryPath = null;
+
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var ffmpegPath = FindFfmpegExecutable();
+            if (string.IsNullOrWhiteSpace(ffmpegPath))
+            {
+                Log?.Invoke(
+                    $"{displayName}：录像压缩已跳过，未找到 FFmpeg。");
+                return;
+            }
+
+            if (!File.Exists(inputPath))
+                return;
+
+            var originalInfo = new FileInfo(inputPath);
+            if (originalInfo.Length <= 0)
+                return;
+
+            var finalPath = BuildCompressedOutputPath(inputPath);
+            temporaryPath = finalPath
+                            + ".hellolive-compress-"
+                            + Guid.NewGuid().ToString("N")
+                            + ".tmp.mp4";
+
+            Log?.Invoke(
+                $"{displayName}：开始后台压缩录像 → {Path.GetFileName(inputPath)}");
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = ffmpegPath,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardInput = true,
+                RedirectStandardError = true,
+                RedirectStandardOutput = false
+            };
+
+            startInfo.ArgumentList.Add("-hide_banner");
+            startInfo.ArgumentList.Add("-loglevel");
+            startInfo.ArgumentList.Add("warning");
+            startInfo.ArgumentList.Add("-y");
+            startInfo.ArgumentList.Add("-i");
+            startInfo.ArgumentList.Add(inputPath);
+            startInfo.ArgumentList.Add("-map");
+            startInfo.ArgumentList.Add("0:v:0?");
+            startInfo.ArgumentList.Add("-map");
+            startInfo.ArgumentList.Add("0:a:0?");
+            startInfo.ArgumentList.Add("-c:v");
+            startInfo.ArgumentList.Add("libx264");
+            startInfo.ArgumentList.Add("-preset");
+            startInfo.ArgumentList.Add("medium");
+            startInfo.ArgumentList.Add("-crf");
+            startInfo.ArgumentList.Add("28");
+            startInfo.ArgumentList.Add("-c:a");
+            startInfo.ArgumentList.Add("aac");
+            startInfo.ArgumentList.Add("-b:a");
+            startInfo.ArgumentList.Add("96k");
+            startInfo.ArgumentList.Add("-movflags");
+            startInfo.ArgumentList.Add("+faststart");
+            startInfo.ArgumentList.Add(temporaryPath);
+
+            using var process = new Process { StartInfo = startInfo };
+            if (!process.Start())
+                throw new InvalidOperationException("无法启动 FFmpeg 压缩录像。");
+
+            var stderrTask = process.StandardError.ReadToEndAsync();
+
+            try
+            {
+                var exitTask = process.WaitForExitAsync();
+                var cancelledTask = Task.Delay(
+                    Timeout.Infinite,
+                    cancellationToken);
+                var completed = await Task.WhenAny(
+                    exitTask,
+                    cancelledTask);
+
+                if (completed == cancelledTask)
+                {
+                    try
+                    {
+                        await process.StandardInput.WriteLineAsync("q");
+                        await process.StandardInput.FlushAsync();
+                    }
+                    catch
+                    {
+                    }
+
+                    await Task.WhenAny(
+                        process.WaitForExitAsync(),
+                        Task.Delay(TimeSpan.FromSeconds(5)));
+
+                    if (!process.HasExited)
+                    {
+                        try
+                        {
+                            process.Kill(entireProcessTree: true);
+                        }
+                        catch
+                        {
+                        }
+                    }
+
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+
+                await process.WaitForExitAsync();
+
+                if (process.ExitCode != 0)
+                {
+                    var error = await stderrTask;
+                    throw new InvalidOperationException(
+                        string.IsNullOrWhiteSpace(error)
+                            ? $"FFmpeg 压缩退出代码：{process.ExitCode}"
+                            : error.Trim());
+                }
+            }
+            finally
+            {
+                if (!process.HasExited)
+                {
+                    try
+                    {
+                        process.Kill(entireProcessTree: true);
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+
+            if (!File.Exists(temporaryPath))
+                throw new IOException("FFmpeg 未生成压缩文件。");
+
+            var compressedBytes = new FileInfo(temporaryPath).Length;
+            if (compressedBytes <= 0)
+                throw new IOException("FFmpeg 生成的压缩文件为空。");
+
+            var originalBytes = originalInfo.Length;
+            if (compressedBytes >= originalBytes)
+            {
+                TryDeleteFile(temporaryPath);
+                temporaryPath = null;
+
+                Log?.Invoke(
+                    $"{displayName}：压缩后未节省空间，已保留原录像，不生成压缩副本。");
+                return;
+            }
+
+            File.Move(temporaryPath, finalPath);
+            temporaryPath = null;
+
+            var savedPercent =
+                100d * (originalBytes - compressedBytes) / originalBytes;
+
+            if (options.DeleteOriginal)
+            {
+                File.Delete(inputPath);
+                Log?.Invoke(
+                    $"{displayName}：录像压缩完成，节省 {savedPercent:0.0}% 空间；原文件已删除 → {Path.GetFileName(finalPath)}");
+            }
+            else
+            {
+                Log?.Invoke(
+                    $"{displayName}：录像压缩完成，节省 {savedPercent:0.0}% 空间；原文件已保留 → {Path.GetFileName(finalPath)}");
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Application is shutting down. The original recording remains untouched.
+        }
+        catch (Exception ex)
+        {
+            Log?.Invoke(
+                $"{displayName}：录像压缩失败，原文件已保留 - {ex.Message}");
+        }
+        finally
+        {
+            if (!string.IsNullOrWhiteSpace(temporaryPath))
+                TryDeleteFile(temporaryPath);
+
+            _compressionGate.Release();
+        }
+    }
+
+    private static string BuildCompressedOutputPath(string inputPath)
+    {
+        var directory = Path.GetDirectoryName(inputPath)
+                        ?? AppContext.BaseDirectory;
+        var name = Path.GetFileNameWithoutExtension(inputPath);
+        var candidate = Path.Combine(
+            directory,
+            name + "_compressed.mp4");
+
+        if (!File.Exists(candidate))
+            return candidate;
+
+        for (var index = 2; index < 10000; index++)
+        {
+            candidate = Path.Combine(
+                directory,
+                $"{name}_compressed_{index}.mp4");
+            if (!File.Exists(candidate))
+                return candidate;
+        }
+
+        return Path.Combine(
+            directory,
+            $"{name}_compressed_{Guid.NewGuid():N}.mp4");
+    }
+
+    private static void TryDeleteFile(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+        catch
+        {
+        }
     }
 
     private async Task RecordHttpFlvAsync(
@@ -554,6 +850,26 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
 
         _disposed = true;
         await StopAllAsync();
+
+        _compressionCancellation.Cancel();
+
+        var compressionTasks = _compressionTasks.Values.ToArray();
+        if (compressionTasks.Length > 0)
+        {
+            try
+            {
+                await Task.WhenAll(compressionTasks);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch
+            {
+            }
+        }
+
+        _compressionCancellation.Dispose();
+        _compressionGate.Dispose();
         _httpClient.Dispose();
     }
 }
