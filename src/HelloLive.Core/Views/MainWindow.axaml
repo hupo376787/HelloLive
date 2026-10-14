@@ -229,6 +229,10 @@
     <Style Selector="ListBox.monitorGridList.largeGrid TextBlock.gridDetail">
       <Setter Property="FontSize" Value="13" />
     </Style>
+    <Style Selector="ListBox.monitorGridList.largeGrid TextBlock.gridFolderSize">
+      <Setter Property="FontSize" Value="14" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
     <Style Selector="StackPanel.gridLargeDetails">
       <Setter Property="IsVisible" Value="False" />
     </Style>
@@ -1123,6 +1127,9 @@
                                      TextTrimming="CharacterEllipsis" />
                           <TextBlock Classes="caption gridDetail"
                                      Text="{Binding ProfileUrl}"
+                                     TextTrimming="CharacterEllipsis" />
+                          <TextBlock Classes="caption gridDetail gridFolderSize"
+                                     Text="{Binding RecordingFolderSizeText}"
                                      TextTrimming="CharacterEllipsis" />
                         </StackPanel>
 
