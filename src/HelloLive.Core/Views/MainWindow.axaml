@@ -405,6 +405,43 @@
                   <TextBlock Classes="caption"
                              Text="{Binding FfmpegStatusText}"
                              TextWrapping="Wrap" />
+
+                  <Border Height="1"
+                          Margin="0,2"
+                          Background="#18FFFFFF" />
+
+                  <Grid ColumnDefinitions="*,Auto"
+                        ColumnSpacing="12">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="录制完成后自动压缩"
+                                 FontWeight="Medium" />
+                      <TextBlock Classes="caption"
+                                 Text="使用 FFmpeg 将录像转为 H.264 MP4（CRF 28），主要用于减少磁盘占用；压缩在后台进行，不影响后续监控。"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1"
+                                  IsChecked="{Binding CompressAfterRecording, Mode=TwoWay}"
+                                  OnContent="开"
+                                  OffContent="关"
+                                  VerticalAlignment="Center" />
+                  </Grid>
+
+                  <Grid ColumnDefinitions="*,Auto"
+                        ColumnSpacing="12">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="压缩成功后删除原文件"
+                                 FontWeight="Medium" />
+                      <TextBlock Classes="caption"
+                                 Text="仅当新文件生成成功且体积确实更小时删除原录像；压缩失败时始终保留原文件。"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1"
+                                  IsChecked="{Binding DeleteOriginalAfterCompression, Mode=TwoWay}"
+                                  IsEnabled="{Binding CanDeleteOriginalAfterCompression}"
+                                  OnContent="开"
+                                  OffContent="关"
+                                  VerticalAlignment="Center" />
+                  </Grid>
                 </StackPanel>
               </Border>
 
