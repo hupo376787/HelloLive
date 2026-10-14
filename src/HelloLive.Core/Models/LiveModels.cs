@@ -35,6 +35,7 @@ public sealed class LiveMonitorTarget : ObservableObject
     private bool _isRecording;
     private string? _recordingFilePath;
     private string _recordingStatus = string.Empty;
+    private long? _recordingFolderSizeBytes;
 
     public string Id
     {
@@ -224,6 +225,36 @@ public sealed class LiveMonitorTarget : ObservableObject
     public string? RecordingFileName => string.IsNullOrWhiteSpace(RecordingFilePath)
         ? null
         : Path.GetFileName(RecordingFilePath);
+
+    [JsonIgnore]
+    public long? RecordingFolderSizeBytes
+    {
+        get => _recordingFolderSizeBytes;
+        set
+        {
+            if (SetProperty(ref _recordingFolderSizeBytes, value))
+                OnPropertyChanged(nameof(RecordingFolderSizeText));
+        }
+    }
+
+    [JsonIgnore]
+    public string RecordingFolderSizeText
+        => RecordingFolderSizeBytes is { } bytes
+            ? $"文件夹：{FormatStorageSize(bytes)}"
+            : "文件夹：—";
+
+    private static string FormatStorageSize(long bytes)
+    {
+        if (bytes >= 1024L * 1024 * 1024 * 1024)
+            return $"{bytes / (1024d * 1024 * 1024 * 1024):0.00} TB";
+        if (bytes >= 1024L * 1024 * 1024)
+            return $"{bytes / (1024d * 1024 * 1024):0.00} GB";
+        if (bytes >= 1024L * 1024)
+            return $"{bytes / (1024d * 1024):0.0} MB";
+        if (bytes >= 1024L)
+            return $"{bytes / 1024d:0.0} KB";
+        return $"{bytes} B";
+    }
 
     [JsonIgnore]
     public string PlatformText => PlatformId.ToLowerInvariant() switch
