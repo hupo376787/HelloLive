@@ -61,6 +61,8 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private double _ffmpegInstallProgressPercent;
     private string _ffmpegInstallProgressText = string.Empty;
     private string _ffmpegStatusText = "尚未检查 FFmpeg";
+    private bool _compressAfterRecording;
+    private bool _deleteOriginalAfterCompression;
     private string _themeIcon = "☾";
     private bool _remoteApiEnabled;
     private int _remoteApiPort;
@@ -93,6 +95,8 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         _blockImagesAndFonts = _settings.BlockImagesAndFonts;
         _autoStartMonitoring = _settings.AutoStartMonitoring;
         _isMonitorPanelVisible = _settings.MonitorPanelVisible;
+        _compressAfterRecording = _settings.CompressAfterRecording;
+        _deleteOriginalAfterCompression = _settings.DeleteOriginalAfterCompression;
         _pushPlusToken = _settings.PushPlusToken ?? string.Empty;
         _remoteApiEnabled = _settings.RemoteApiEnabled;
         _remoteApiPort = _settings.RemoteApiPort;
@@ -422,6 +426,37 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     }
 
     public bool IsFfmpegAutoInstallSupported => _ffmpegInstaller.IsSupported;
+
+    public bool CompressAfterRecording
+    {
+        get => _compressAfterRecording;
+        set
+        {
+            if (!SetProperty(ref _compressAfterRecording, value))
+                return;
+
+            _settings.CompressAfterRecording = value;
+            PersistSettingsSoon();
+            OnPropertyChanged(nameof(CanDeleteOriginalAfterCompression));
+            RefreshCoordinatorState();
+        }
+    }
+
+    public bool DeleteOriginalAfterCompression
+    {
+        get => _deleteOriginalAfterCompression;
+        set
+        {
+            if (!SetProperty(ref _deleteOriginalAfterCompression, value))
+                return;
+
+            _settings.DeleteOriginalAfterCompression = value;
+            PersistSettingsSoon();
+            RefreshCoordinatorState();
+        }
+    }
+
+    public bool CanDeleteOriginalAfterCompression => CompressAfterRecording;
 
     public string InstallFfmpegButtonText => IsFfmpegInstalling
         ? "正在下载 FFmpeg…"
@@ -1199,6 +1234,10 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             CheckIntervalSeconds,
             CheckTimeoutSeconds,
             BlockImagesAndFonts));
+        _coordinator.SetPostRecordingCompressionOptions(
+            new PostRecordingCompressionOptions(
+                CompressAfterRecording,
+                DeleteOriginalAfterCompression));
     }
 
     private void RaiseMetricsChanged()
