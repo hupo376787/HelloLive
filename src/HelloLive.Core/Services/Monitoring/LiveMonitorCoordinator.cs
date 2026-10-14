@@ -31,6 +31,7 @@ public sealed class LiveMonitorCoordinator : IAsyncDisposable
         _recorder.Log += Recorder_Log;
         _recorder.RecordingStateChanged += Recorder_RecordingStateChanged;
         _recorder.StorageChanged += Recorder_StorageChanged;
+        _recorder.LowDiskSpaceDetected += Recorder_LowDiskSpaceDetected;
     }
 
     public bool IsRunning => _runTask is { IsCompleted: false };
@@ -39,6 +40,7 @@ public sealed class LiveMonitorCoordinator : IAsyncDisposable
     public event Action<LiveCheckResult>? CheckResultChanged;
     public event Action<LiveRecordingState>? RecordingStateChanged;
     public event Action<string>? StorageChanged;
+    public event Action<LowDiskSpaceInfo>? LowDiskSpaceDetected;
     public event Action<string>? Log;
     public event Action<bool>? RunningChanged;
 
@@ -333,11 +335,15 @@ public sealed class LiveMonitorCoordinator : IAsyncDisposable
     private void Recorder_StorageChanged(string targetId)
         => StorageChanged?.Invoke(targetId);
 
+    private void Recorder_LowDiskSpaceDetected(LowDiskSpaceInfo info)
+        => LowDiskSpaceDetected?.Invoke(info);
+
     public async ValueTask DisposeAsync()
     {
         _recorder.Log -= Recorder_Log;
         _recorder.RecordingStateChanged -= Recorder_RecordingStateChanged;
         _recorder.StorageChanged -= Recorder_StorageChanged;
+        _recorder.LowDiskSpaceDetected -= Recorder_LowDiskSpaceDetected;
         await StopAsync();
         await _recorder.DisposeAsync();
         _httpClient.Dispose();
