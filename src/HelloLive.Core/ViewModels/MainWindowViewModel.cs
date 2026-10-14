@@ -355,6 +355,8 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         {
             if (value)
                 SetMonitorGridSizeMode(0);
+            else if (_monitorGridSizeMode == 0)
+                OnPropertyChanged(nameof(IsMonitorGridSmall));
         }
     }
 
@@ -365,6 +367,8 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         {
             if (value)
                 SetMonitorGridSizeMode(1);
+            else if (_monitorGridSizeMode == 1)
+                OnPropertyChanged(nameof(IsMonitorGridMedium));
         }
     }
 
@@ -375,6 +379,8 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         {
             if (value)
                 SetMonitorGridSizeMode(2);
+            else if (_monitorGridSizeMode == 2)
+                OnPropertyChanged(nameof(IsMonitorGridLarge));
         }
     }
 
@@ -1249,7 +1255,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
     private void Coordinator_CheckResultChanged(LiveCheckResult result)
     {
-        Dispatcher.UIThread.Post(() =>
+        void ApplyResultOnUi()
         {
             var target = Monitors.FirstOrDefault(x => x.Id == result.TargetId);
             if (target is null)
@@ -1271,7 +1277,19 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
                 ? $"正在检查：{target.DisplayName}"
                 : $"{target.DisplayName} · {target.StateText}";
             RaiseMetricsChanged();
-        });
+        }
+
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            ApplyResultOnUi();
+        }
+        else
+        {
+            Dispatcher.UIThread
+                .InvokeAsync(ApplyResultOnUi)
+                .GetAwaiter()
+                .GetResult();
+        }
     }
 
     private LiveMonitorTarget ReconcileDuplicateAuthor(
