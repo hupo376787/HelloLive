@@ -119,6 +119,8 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         ToggleThemeCommand = new RelayCommand(ToggleTheme);
         ToggleMonitorPanelCommand = new RelayCommand(ToggleMonitorPanel);
         ToggleMonitorGridCommand = new RelayCommand(ToggleMonitorGrid);
+        ClearMonitorSearchCommand = new RelayCommand(
+            () => MonitorSearchText = string.Empty);
 
         foreach (var target in _monitorStore.Load())
             AttachTarget(target);
@@ -152,6 +154,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     public IRelayCommand ToggleThemeCommand { get; }
     public IRelayCommand ToggleMonitorPanelCommand { get; }
     public IRelayCommand ToggleMonitorGridCommand { get; }
+    public IRelayCommand ClearMonitorSearchCommand { get; }
 
     public string NewMonitorUrl
     {
@@ -316,9 +319,13 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             if (!SetProperty(ref _monitorSearchText, value ?? string.Empty))
                 return;
 
+            OnPropertyChanged(nameof(HasMonitorSearchText));
             OnPropertyChanged(nameof(FilteredMonitors));
         }
     }
+
+    public bool HasMonitorSearchText
+        => !string.IsNullOrWhiteSpace(MonitorSearchText);
 
     public bool ShowLiveMonitorsOnly
     {
