@@ -301,6 +301,9 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
             return;
         }
 
+        if (_compressionTasks.ContainsKey(inputPath))
+            return;
+
         var task = Task.Run(
             () => CompressRecordingAsync(
                 displayName,
@@ -486,9 +489,17 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
 
             if (options.DeleteOriginal)
             {
-                File.Delete(inputPath);
-                Log?.Invoke(
-                    $"{displayName}：录像压缩完成，节省 {savedPercent:0.0}% 空间；原文件已删除 → {Path.GetFileName(finalPath)}");
+                try
+                {
+                    File.Delete(inputPath);
+                    Log?.Invoke(
+                        $"{displayName}：录像压缩完成，节省 {savedPercent:0.0}% 空间；原文件已删除 → {Path.GetFileName(finalPath)}");
+                }
+                catch (Exception ex)
+                {
+                    Log?.Invoke(
+                        $"{displayName}：录像压缩完成，节省 {savedPercent:0.0}% 空间，但原文件删除失败，已同时保留两份 - {ex.Message}");
+                }
             }
             else
             {
