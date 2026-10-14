@@ -30,6 +30,7 @@ public sealed class LiveMonitorCoordinator : IAsyncDisposable
         _recorder = recorder;
         _recorder.Log += Recorder_Log;
         _recorder.RecordingStateChanged += Recorder_RecordingStateChanged;
+        _recorder.StorageChanged += Recorder_StorageChanged;
     }
 
     public bool IsRunning => _runTask is { IsCompleted: false };
@@ -37,6 +38,7 @@ public sealed class LiveMonitorCoordinator : IAsyncDisposable
 
     public event Action<LiveCheckResult>? CheckResultChanged;
     public event Action<LiveRecordingState>? RecordingStateChanged;
+    public event Action<string>? StorageChanged;
     public event Action<string>? Log;
     public event Action<bool>? RunningChanged;
 
@@ -328,10 +330,14 @@ public sealed class LiveMonitorCoordinator : IAsyncDisposable
     private void Recorder_RecordingStateChanged(LiveRecordingState state)
         => RecordingStateChanged?.Invoke(state);
 
+    private void Recorder_StorageChanged(string targetId)
+        => StorageChanged?.Invoke(targetId);
+
     public async ValueTask DisposeAsync()
     {
         _recorder.Log -= Recorder_Log;
         _recorder.RecordingStateChanged -= Recorder_RecordingStateChanged;
+        _recorder.StorageChanged -= Recorder_StorageChanged;
         await StopAsync();
         await _recorder.DisposeAsync();
         _httpClient.Dispose();
