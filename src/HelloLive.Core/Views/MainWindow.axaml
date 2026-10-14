@@ -109,8 +109,95 @@
       <Setter Property="Margin" Value="0,0,12,12" />
       <Setter Property="VerticalContentAlignment" Value="Stretch" />
     </Style>
+
+    <!-- Small card: avatar + name only; live badge stays on the avatar. -->
+    <Style Selector="ListBox.monitorGridList.smallGrid Border.gridCard">
+      <Setter Property="Padding" Value="8" />
+    </Style>
+    <Style Selector="ListBox.monitorGridList.smallGrid Grid.gridAvatarHost">
+      <Setter Property="Width" Value="50" />
+      <Setter Property="Height" Value="50" />
+    </Style>
+    <Style Selector="ListBox.monitorGridList.smallGrid Border.gridAvatarCircle">
+      <Setter Property="Width" Value="46" />
+      <Setter Property="Height" Value="46" />
+      <Setter Property="CornerRadius" Value="23" />
+    </Style>
+    <Style Selector="ListBox.monitorGridList.smallGrid Image.gridAvatarImage">
+      <Setter Property="Width" Value="46" />
+      <Setter Property="Height" Value="46" />
+    </Style>
+    <Style Selector="ListBox.monitorGridList.smallGrid TextBlock.gridAvatarInitial">
+      <Setter Property="FontSize" Value="18" />
+    </Style>
+    <Style Selector="ListBox.monitorGridList.smallGrid TextBlock.gridDisplayName">
+      <Setter Property="FontSize" Value="14" />
+    </Style>
+    <Style Selector="ListBox.monitorGridList.smallGrid TextBlock.gridDetail">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <Style Selector="ListBox.monitorGridList.smallGrid StackPanel.gridControls">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <Style Selector="ListBox.monitorGridList.smallGrid Border.gridRecording">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <Style Selector="ListBox.monitorGridList.smallGrid StackPanel.gridLargeDetails">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+
+    <!-- Large card: use the extra height for genuinely larger content. -->
     <Style Selector="ListBox.monitorGridList.largeGrid ListBoxItem">
-      <Setter Property="MinHeight" Value="190" />
+      <Setter Property="MinHeight" Value="210" />
+    </Style>
+    <Style Selector="ListBox.monitorGridList.largeGrid Border.gridCard">
+      <Setter Property="Padding" Value="18" />
+    </Style>
+    <Style Selector="ListBox.monitorGridList.largeGrid StackPanel.gridCardContent">
+      <Setter Property="Spacing" Value="16" />
+    </Style>
+    <Style Selector="ListBox.monitorGridList.largeGrid Grid.gridHeader">
+      <Setter Property="ColumnSpacing" Value="16" />
+    </Style>
+    <Style Selector="ListBox.monitorGridList.largeGrid Grid.gridAvatarHost">
+      <Setter Property="Width" Value="96" />
+      <Setter Property="Height" Value="96" />
+    </Style>
+    <Style Selector="ListBox.monitorGridList.largeGrid Border.gridAvatarCircle">
+      <Setter Property="Width" Value="90" />
+      <Setter Property="Height" Value="90" />
+      <Setter Property="CornerRadius" Value="45" />
+    </Style>
+    <Style Selector="ListBox.monitorGridList.largeGrid Image.gridAvatarImage">
+      <Setter Property="Width" Value="90" />
+      <Setter Property="Height" Value="90" />
+    </Style>
+    <Style Selector="ListBox.monitorGridList.largeGrid TextBlock.gridAvatarInitial">
+      <Setter Property="FontSize" Value="30" />
+    </Style>
+    <Style Selector="ListBox.monitorGridList.largeGrid Border.gridLiveBadge">
+      <Setter Property="MinWidth" Value="38" />
+      <Setter Property="Height" Value="21" />
+      <Setter Property="Padding" Value="6,2" />
+    </Style>
+    <Style Selector="ListBox.monitorGridList.largeGrid TextBlock.gridLiveText">
+      <Setter Property="FontSize" Value="10" />
+    </Style>
+    <Style Selector="ListBox.monitorGridList.largeGrid TextBlock.gridDisplayName">
+      <Setter Property="FontSize" Value="20" />
+    </Style>
+    <Style Selector="ListBox.monitorGridList.largeGrid TextBlock.gridDetail">
+      <Setter Property="FontSize" Value="13" />
+    </Style>
+    <Style Selector="StackPanel.gridLargeDetails">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <Style Selector="ListBox.monitorGridList.largeGrid StackPanel.gridLargeDetails">
+      <Setter Property="IsVisible" Value="True" />
+      <Setter Property="Spacing" Value="5" />
+    </Style>
+    <Style Selector="ListBox.monitorGridList.largeGrid Border.gridRecording">
+      <Setter Property="Padding" Value="12,10" />
     </Style>
     <Style Selector="ToggleButton.gridSize">
       <Setter Property="Width" Value="38" />
@@ -859,6 +946,7 @@
                      Grid.Row="1"
                      Margin="0"
                      Classes="monitorList monitorGridList"
+                     Classes.smallGrid="{Binding IsMonitorGridSmall}"
                      Classes.largeGrid="{Binding IsMonitorGridLarge}"
                      ItemsSource="{Binding FilteredMonitors}"
                      Background="Transparent"
@@ -875,7 +963,8 @@
               </ListBox.ItemsPanel>
               <ListBox.ItemTemplate>
                 <DataTemplate x:CompileBindings="False">
-                  <Border Background="{DynamicResource MonitorItemColor}"
+                  <Border Classes="gridCard"
+                          Background="{DynamicResource MonitorItemColor}"
                           BorderBrush="{DynamicResource BorderColor}"
                           BorderThickness="1"
                           CornerRadius="12"
@@ -903,11 +992,16 @@
                                   Click="RemoveMonitorButton_Click" />
                       </ContextMenu>
                     </Border.ContextMenu>
-                    <StackPanel Spacing="10">
-                      <Grid ColumnDefinitions="58,*,Auto" ColumnSpacing="10">
-                        <Grid Width="58"
+                    <StackPanel Classes="gridCardContent"
+                                Spacing="10">
+                      <Grid Classes="gridHeader"
+                            ColumnDefinitions="Auto,*,Auto"
+                            ColumnSpacing="10">
+                        <Grid Classes="gridAvatarHost"
+                              Width="58"
                               Height="58">
-                          <Border Width="54"
+                          <Border Classes="gridAvatarCircle"
+                                  Width="54"
                                   Height="54"
                                   CornerRadius="27"
                                   ClipToBounds="True"
@@ -917,20 +1011,23 @@
                                   HorizontalAlignment="Left"
                                   VerticalAlignment="Top">
                             <Grid>
-                              <TextBlock Text="{Binding AvatarInitial}"
+                              <TextBlock Classes="gridAvatarInitial"
+                                         Text="{Binding AvatarInitial}"
                                          FontSize="20"
                                          FontWeight="Bold"
                                          Foreground="#7C3AED"
                                          HorizontalAlignment="Center"
                                          VerticalAlignment="Center" />
-                              <Image Source="{Binding AvatarImage}"
+                              <Image Classes="gridAvatarImage"
+                                     Source="{Binding AvatarImage}"
                                      Stretch="UniformToFill"
                                      Width="54"
                                      Height="54" />
                             </Grid>
                           </Border>
 
-                          <Border MinWidth="29"
+                          <Border Classes="gridLiveBadge"
+                                  MinWidth="29"
                                   Height="17"
                                   Padding="5,1"
                                   CornerRadius="5"
@@ -940,7 +1037,8 @@
                                   HorizontalAlignment="Right"
                                   VerticalAlignment="Bottom"
                                   IsVisible="{Binding IsLive}">
-                            <TextBlock Text="Live"
+                            <TextBlock Classes="gridLiveText"
+                                       Text="Live"
                                        FontSize="9"
                                        FontWeight="Bold"
                                        Foreground="White"
@@ -950,20 +1048,22 @@
                         </Grid>
 
                         <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                          <TextBlock Text="{Binding DisplayName}"
+                          <TextBlock Classes="gridDisplayName"
+                                     Text="{Binding DisplayName}"
                                      FontFamily="Segoe UI Emoji,Microsoft YaHei UI,Segoe UI"
                                      FontSize="16"
                                      FontWeight="SemiBold"
                                      TextTrimming="CharacterEllipsis" />
-                          <TextBlock Classes="caption"
+                          <TextBlock Classes="caption gridDetail"
                                      Text="{Binding AuthorIdText}"
                                      TextTrimming="CharacterEllipsis" />
-                          <TextBlock Classes="caption"
+                          <TextBlock Classes="caption gridDetail"
                                      Text="{Binding ProfileUrl}"
                                      TextTrimming="CharacterEllipsis" />
                         </StackPanel>
 
                         <StackPanel Grid.Column="2"
+                                    Classes="gridControls"
                                     Spacing="7"
                                     HorizontalAlignment="Right">
                           <Border Padding="8,3"
@@ -984,7 +1084,22 @@
                         </StackPanel>
                       </Grid>
 
-                      <Border Background="#1210B981"
+                      <StackPanel Classes="gridLargeDetails">
+                        <TextBlock Text="{Binding StateText}"
+                                   FontSize="14"
+                                   FontWeight="SemiBold" />
+                        <TextBlock Classes="caption"
+                                   Text="{Binding StatusMessage}"
+                                   FontSize="13"
+                                   TextWrapping="Wrap"
+                                   MaxLines="2" />
+                        <TextBlock Classes="caption"
+                                   Text="{Binding LastCheckedText}"
+                                   FontSize="13" />
+                      </StackPanel>
+
+                      <Border Classes="gridRecording"
+                              Background="#1210B981"
                               BorderBrush="#3010B981"
                               BorderThickness="1"
                               CornerRadius="9"
