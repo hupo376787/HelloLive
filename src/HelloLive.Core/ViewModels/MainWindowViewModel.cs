@@ -2035,7 +2035,9 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         if (_ffmpegInstaller is IDisposable ffmpegDisposable)
             ffmpegDisposable.Dispose();
         _imageCache.Dispose();
-        _folderSizeGate.Dispose();
+        // Folder-size scans are fire-and-forget background work and may still be
+        // unwinding during shutdown; leave this lightweight semaphore undisposed
+        // to avoid a late Release() racing with disposal.
         _saveGate.Dispose();
     }
 }
