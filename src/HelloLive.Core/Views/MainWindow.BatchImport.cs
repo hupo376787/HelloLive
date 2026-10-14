@@ -160,10 +160,11 @@ public partial class MainWindow
             pointerEvent.Handled = true;
         };
 
-        var titleBarGrid = new Grid
-        {
-            ColumnDefinitions = new ColumnDefinitions("*,Auto")
-        };
+        var titleBarGrid = new Grid();
+        titleBarGrid.ColumnDefinitions.Add(
+            new ColumnDefinition(new GridLength(1, GridUnitType.Star)));
+        titleBarGrid.ColumnDefinitions.Add(
+            new ColumnDefinition(GridLength.Auto));
         titleBarGrid.Children.Add(dragRegion);
         Grid.SetColumn(closeButton, 1);
         titleBarGrid.Children.Add(closeButton);
@@ -228,9 +229,14 @@ public partial class MainWindow
 
         var contentGrid = new Grid
         {
-            RowDefinitions = new RowDefinitions("Auto,*,Auto"),
             RowSpacing = 16
         };
+        contentGrid.RowDefinitions.Add(
+            new RowDefinition(GridLength.Auto));
+        contentGrid.RowDefinitions.Add(
+            new RowDefinition(new GridLength(1, GridUnitType.Star)));
+        contentGrid.RowDefinitions.Add(
+            new RowDefinition(GridLength.Auto));
         contentGrid.Children.Add(description);
         Grid.SetRow(editor, 1);
         contentGrid.Children.Add(editor);
@@ -244,10 +250,11 @@ public partial class MainWindow
             Child = contentGrid
         };
 
-        var rootGrid = new Grid
-        {
-            RowDefinitions = new RowDefinitions("Auto,*")
-        };
+        var rootGrid = new Grid();
+        rootGrid.RowDefinitions.Add(
+            new RowDefinition(GridLength.Auto));
+        rootGrid.RowDefinitions.Add(
+            new RowDefinition(new GridLength(1, GridUnitType.Star)));
         rootGrid.Children.Add(titleBar);
         Grid.SetRow(contentBorder, 1);
         rootGrid.Children.Add(contentBorder);
@@ -309,14 +316,14 @@ public partial class MainWindow
                 {
                     Title = "选择批量作者地址文本文件",
                     AllowMultiple = false,
-                    FileTypeFilter =
-                    [
+                    FileTypeFilter = new[]
+                    {
                         new FilePickerFileType("文本文件")
                         {
-                            Patterns = ["*.txt"],
-                            MimeTypes = ["text/plain"]
+                            Patterns = new[] { "*.txt" },
+                            MimeTypes = new[] { "text/plain" }
                         }
-                    ]
+                    }
                 });
 
             if (files.Count == 0)
