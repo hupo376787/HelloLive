@@ -4,6 +4,7 @@ using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using HelloLive.Core.Models;
+using HelloLive.Core.Services.Recording;
 using HelloLive.Core.ViewModels;
 using System.Diagnostics;
 
@@ -193,6 +194,36 @@ public partial class MainWindow : Window
     /// </summary>
     public void RequestCloseConfirmation()
         => ShowCloseConfirmation();
+
+    public void ShowLowDiskSpaceAlert(LowDiskSpaceInfo info)
+    {
+        var availableText = FormatDiskSpace(info.AvailableBytes);
+        var thresholdText = FormatDiskSpace(info.ThresholdBytes);
+
+        LowDiskSpaceMessageText.Text =
+            $"录像目录所在磁盘仅剩 {availableText}，已达到 {thresholdText} 停止阈值。HelloLive 已停止当前所有录像，并阻止新的录像启动。";
+        LowDiskSpacePathText.Text =
+            $"录像目录：{info.StoragePath}";
+
+        LowDiskSpaceOverlay.IsVisible = true;
+        Activate();
+    }
+
+    private void LowDiskSpaceConfirmButton_Click(
+        object? sender,
+        Avalonia.Interactivity.RoutedEventArgs e)
+        => LowDiskSpaceOverlay.IsVisible = false;
+
+    private static string FormatDiskSpace(long bytes)
+    {
+        if (bytes >= 1024L * 1024 * 1024)
+            return $"{bytes / (1024d * 1024 * 1024):0.00} GB";
+        if (bytes >= 1024L * 1024)
+            return $"{bytes / (1024d * 1024):0.0} MB";
+        if (bytes >= 1024L)
+            return $"{bytes / 1024d:0.0} KB";
+        return $"{Math.Max(0, bytes)} B";
+    }
 
     private void CloseCancelButton_Click(
         object? sender,
