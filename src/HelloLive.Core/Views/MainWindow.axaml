@@ -756,10 +756,30 @@
                 <TextBlock Classes="caption"
                            Text="作者头像、身份、直播状态与录像状态集中显示；双击打开录像文件夹，右键打开操作菜单。"
                            TextWrapping="Wrap" />
-                <TextBox Text="{Binding MonitorSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         PlaceholderText="搜索昵称、作者ID、平台或地址"
-                         MinHeight="34"
-                         VerticalContentAlignment="Center" />
+                <Grid>
+                  <TextBox Text="{Binding MonitorSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                           PlaceholderText="搜索昵称、作者ID、平台或地址"
+                           MinHeight="34"
+                           Padding="10,0,38,0"
+                           VerticalContentAlignment="Center" />
+                  <Button Width="28"
+                          Height="28"
+                          Padding="0"
+                          Margin="0,3,4,3"
+                          HorizontalAlignment="Right"
+                          VerticalAlignment="Stretch"
+                          Background="Transparent"
+                          BorderThickness="0"
+                          IsVisible="{Binding HasMonitorSearchText}"
+                          Command="{Binding ClearMonitorSearchCommand}"
+                          ToolTip.Tip="清空搜索">
+                    <TextBlock Text="×"
+                               FontSize="18"
+                               Foreground="#7A8498"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
+                  </Button>
+                </Grid>
                 <Grid ColumnDefinitions="*,Auto"
                       Margin="0,1,0,0">
                   <TextBlock Classes="caption"
@@ -944,10 +964,30 @@
                            TextWrapping="Wrap" />
                 <Grid ColumnDefinitions="*,Auto"
                       ColumnSpacing="12">
-                  <TextBox Text="{Binding MonitorSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                           PlaceholderText="搜索昵称、作者ID、平台或地址"
-                           MinHeight="34"
-                           VerticalContentAlignment="Center" />
+                  <Grid>
+                    <TextBox Text="{Binding MonitorSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             PlaceholderText="搜索昵称、作者ID、平台或地址"
+                             MinHeight="34"
+                             Padding="10,0,38,0"
+                             VerticalContentAlignment="Center" />
+                    <Button Width="28"
+                            Height="28"
+                            Padding="0"
+                            Margin="0,3,4,3"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Stretch"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            IsVisible="{Binding HasMonitorSearchText}"
+                            Command="{Binding ClearMonitorSearchCommand}"
+                            ToolTip.Tip="清空搜索">
+                      <TextBlock Text="×"
+                                 FontSize="18"
+                                 Foreground="#7A8498"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center" />
+                    </Button>
+                  </Grid>
                   <StackPanel Grid.Column="1"
                               Orientation="Horizontal"
                               Spacing="6"
