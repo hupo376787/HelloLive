@@ -47,6 +47,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private bool _isMonitorPanelVisible;
     private bool _isMonitorGridExpanded;
     private string _monitorSearchText = string.Empty;
+    private bool _showLiveMonitorsOnly;
     private double _monitorGridItemWidth = 340d;
     private double _monitorGridAvailableWidth;
     private int _monitorGridSizeMode = 1;
@@ -319,15 +320,32 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         }
     }
 
+    public bool ShowLiveMonitorsOnly
+    {
+        get => _showLiveMonitorsOnly;
+        set
+        {
+            if (!SetProperty(ref _showLiveMonitorsOnly, value))
+                return;
+
+            OnPropertyChanged(nameof(FilteredMonitors));
+        }
+    }
+
     public IEnumerable<LiveMonitorTarget> FilteredMonitors
     {
         get
         {
+            IEnumerable<LiveMonitorTarget> items = Monitors;
+
+            if (ShowLiveMonitorsOnly)
+                items = items.Where(target => target.IsLive);
+
             var keyword = MonitorSearchText.Trim();
             if (keyword.Length == 0)
-                return Monitors;
+                return items;
 
-            return Monitors.Where(target =>
+            return items.Where(target =>
                 ContainsSearchText(target.DisplayName, keyword)
                 || ContainsSearchText(target.AuthorId, keyword)
                 || ContainsSearchText(target.ProfileUrl, keyword)
