@@ -1355,6 +1355,63 @@
         </Border>
       </Grid>
 
+      <!-- 磁盘空间保护：剩余空间达到 1 GB 阈值时停止录像并强提醒用户。 -->
+      <Grid x:Name="LowDiskSpaceOverlay"
+            Grid.RowSpan="2"
+            Background="#99000000"
+            IsVisible="False"
+            Panel.ZIndex="3200">
+        <Border Width="580"
+                Padding="26"
+                CornerRadius="12"
+                Background="{DynamicResource CardColor}"
+                BorderBrush="#FFEF4444"
+                BorderThickness="1.5"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+          <StackPanel Spacing="16">
+            <Grid ColumnDefinitions="Auto,*"
+                  ColumnSpacing="14">
+              <Border Width="46"
+                      Height="46"
+                      CornerRadius="23"
+                      Background="#22EF4444"
+                      VerticalAlignment="Top">
+                <TextBlock Text="!"
+                           FontSize="26"
+                           FontWeight="Bold"
+                           Foreground="#EF4444"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+              </Border>
+              <StackPanel Grid.Column="1"
+                          Spacing="6">
+                <TextBlock Text="磁盘空间不足，录像已停止"
+                           FontSize="21"
+                           FontWeight="SemiBold"
+                           Foreground="#EF4444" />
+                <TextBlock x:Name="LowDiskSpaceMessageText"
+                           Classes="caption"
+                           TextWrapping="Wrap" />
+                <TextBlock x:Name="LowDiskSpacePathText"
+                           Classes="caption"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+            </Grid>
+
+            <TextBlock Text="请清理录像磁盘空间。剩余空间恢复到 1 GB 以上后，后续检测到直播时才会重新允许启动录像。"
+                       TextWrapping="Wrap" />
+
+            <Button Classes="coral"
+                    Content="知道了"
+                    MinHeight="42"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Click="LowDiskSpaceConfirmButton_Click" />
+          </StackPanel>
+        </Border>
+      </Grid>
+
       <!-- 关闭确认：正常退出前先安全停止录像，也可最小化到托盘继续监控。 -->
       <Grid x:Name="CloseConfirmOverlay"
             Grid.RowSpan="2"
