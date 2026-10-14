@@ -2,7 +2,7 @@ namespace HelloLive.Core.Services.Settings;
 
 public sealed class AppSettings
 {
-    public int Version { get; set; } = 3;
+    public int Version { get; set; } = 4;
     public string Theme { get; set; } = "Light";
     public bool HeadlessMode { get; set; } = true;
     public int MaxConcurrentPages { get; set; } = 4;
@@ -11,6 +11,12 @@ public sealed class AppSettings
     public bool BlockImagesAndFonts { get; set; } = true;
     public bool AutoStartMonitoring { get; set; }
     public bool MonitorPanelVisible { get; set; } = true;
+
+    /// <summary>录像结束后使用 FFmpeg 转码为更小的 MP4 文件。</summary>
+    public bool CompressAfterRecording { get; set; }
+
+    /// <summary>仅在压缩成功且压缩文件更小时删除原录像。</summary>
+    public bool DeleteOriginalAfterCompression { get; set; }
 
     /// <summary>PushPlus 微信开播提醒 Token；为空时不发送开播通知。</summary>
     public string PushPlusToken { get; set; } = string.Empty;
