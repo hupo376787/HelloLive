@@ -712,6 +712,135 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         await _coordinator.CheckOneAsync(target.Id);
     }
 
+    public async Task BatchImportMonitorsAsync(string? content)
+    {
+        var lines = (content ?? string.Empty)
+            .Split(
+                new[] { "\r\n", "\n", "\r" },
+                StringSplitOptions.None)
+            .Select(line => line.Trim())
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .ToArray();
+
+        if (lines.Length == 0)
+        {
+            AddLog("批量导入没有发现有效内容；空行会自动忽略。");
+            return;
+        }
+
+        var addedTargetIds = new List<string>();
+        var duplicateCount = 0;
+        var invalidCount = 0;
+        var failedCount = 0;
+
+        AddLog($"开始批量导入作者，共读取 {lines.Length} 行非空内容。");
+
+        for (var index = 0; index < lines.Length; index++)
+        {
+            var sourceLine = lines[index];
+
+            var adapter = _platforms.ResolveByInput(
+                sourceLine,
+                out var extractedUrl);
+            if (adapter is null
+                || string.IsNullOrWhiteSpace(extractedUrl))
+            {
+                invalidCount++;
+                AddLog(
+                    $"批量导入 {index + 1}/{lines.Length}：未识别到受支持的平台地址，已跳过。");
+                continue;
+            }
+
+            string normalizedUrl;
+            try
+            {
+                normalizedUrl = await adapter.ResolveProfileUrlAsync(
+                    extractedUrl);
+            }
+            catch (Exception ex)
+            {
+                failedCount++;
+                AddLog(
+                    $"批量导入 {index + 1}/{lines.Length}：解析地址失败，已跳过 - {ex.Message}");
+                continue;
+            }
+
+            if (Monitors.Any(x =>
+                    string.Equals(
+                        x.ProfileUrl,
+                        normalizedUrl,
+                        StringComparison.OrdinalIgnoreCase)))
+            {
+                duplicateCount++;
+                AddLog(
+                    $"批量导入 {index + 1}/{lines.Length}：该作者已在监控列表中，已跳过。");
+                continue;
+            }
+
+            var target = new LiveMonitorTarget
+            {
+                PlatformId = adapter.Id,
+                ProfileUrl = normalizedUrl,
+                DisplayName = BuildDefaultName(
+                    normalizedUrl,
+                    adapter.DisplayName),
+                UseCustomDisplayName = false,
+                AuthorId = LiveAuthorIdentityHelper.ExtractStableAuthorId(
+                    normalizedUrl),
+                IsEnabled = true
+            };
+
+            AttachTarget(target);
+            addedTargetIds.Add(target.Id);
+
+            AddLog(
+                $"批量导入 {index + 1}/{lines.Length}：已加入监控列表（{adapter.DisplayName}）→ {normalizedUrl}");
+        }
+
+        if (addedTargetIds.Count > 0)
+        {
+            await SaveMonitorsAsync();
+            RefreshCoordinatorState();
+            RaiseMetricsChanged();
+
+            // Do not make the import dialog wait for every Playwright check.
+            // The cards appear immediately, then nickname/avatar/live state are
+            // populated in the background using the same single-item check path.
+            _ = RecheckBatchImportedMonitorsAsync(
+                addedTargetIds.ToArray());
+        }
+
+        AddLog(
+            $"批量导入完成：新增 {addedTargetIds.Count} 个，重复 {duplicateCount} 个，无效 {invalidCount} 个，解析失败 {failedCount} 个，共 {lines.Length} 个。");
+    }
+
+    private async Task RecheckBatchImportedMonitorsAsync(
+        IReadOnlyList<string> targetIds)
+    {
+        foreach (var targetId in targetIds)
+        {
+            var target = Monitors.FirstOrDefault(x =>
+                string.Equals(
+                    x.Id,
+                    targetId,
+                    StringComparison.Ordinal));
+
+            if (target is null || !target.IsEnabled)
+                continue;
+
+            try
+            {
+                await _coordinator.CheckOneAsync(target.Id);
+            }
+            catch (Exception ex)
+            {
+                Dispatcher.UIThread.Post(() =>
+                    AddLog(
+                        $"{target.DisplayName}：批量导入后的后台检查失败 - {ex.Message}"));
+            }
+        }
+    }
+
     public async Task<string?> UpdateMonitorAuthorInfoAsync(
         LiveMonitorTarget target,
         string displayName,
