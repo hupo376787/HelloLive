@@ -4,6 +4,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform;
 using HelloLive.Core.Services.Monitoring;
+using HelloLive.Core.Services.Recording;
 using HelloLive.Core.Services.Settings;
 using HelloLive.Core.Sites;
 using HelloLive.Core.Sites.Douyin;
@@ -184,6 +185,8 @@ public partial class App : Application
                 "正在初始化系统托盘");
 
             InitializeTrayIcon(mainWindow);
+            viewModel.LowDiskSpaceAlertRequested +=
+                ViewModel_LowDiskSpaceAlertRequested;
 
             splash.SetProgress(
                 100,
@@ -199,6 +202,13 @@ public partial class App : Application
 
             desktop.MainWindow = mainWindow;
             mainWindow.Show();
+
+            if (viewModel.ConsumePendingLowDiskSpaceAlert()
+                is { } pendingLowDisk)
+            {
+                mainWindow.ShowLowDiskSpaceAlert(pendingLowDisk);
+            }
+
             splash.Close();
 
             // Historical recording repair is intentionally post-startup. It must never
@@ -431,6 +441,17 @@ public partial class App : Application
         _lastTrayClickAt = null;
     }
 
+    private void ViewModel_LowDiskSpaceAlertRequested(
+        LowDiskSpaceInfo info)
+    {
+        _viewModel?.ConsumePendingLowDiskSpaceAlert();
+
+        // Disk exhaustion is an urgent condition. If the app is in the tray,
+        // restore it so the warning cannot remain hidden behind the tray icon.
+        RestoreMainWindowFromTray();
+        _mainWindow?.ShowLowDiskSpaceAlert(info);
+    }
+
     private async void ViewModel_RemoteApiEnabledChanged(object? sender, bool enabled)
     {
         if (_remoteApiHost is not null)
@@ -473,6 +494,8 @@ public partial class App : Application
         {
             _viewModel.RemoteApiEnabledChanged -= ViewModel_RemoteApiEnabledChanged;
             _viewModel.RemoteApiPortChanged -= ViewModel_RemoteApiPortChanged;
+            _viewModel.LowDiskSpaceAlertRequested -=
+                ViewModel_LowDiskSpaceAlertRequested;
         }
 
         if (_remoteApiHost is not null)
