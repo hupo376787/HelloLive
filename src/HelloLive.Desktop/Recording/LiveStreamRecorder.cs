@@ -95,11 +95,7 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
         Directory.CreateDirectory(DownloadRoot);
 
         if (CheckAndHandleLowDiskSpace())
-        {
-            Log?.Invoke(
-                $"{target.DisplayName}：磁盘剩余空间不超过 1 GB，已阻止启动录像。");
             return Task.CompletedTask;
-        }
 
         var authorId = string.IsNullOrWhiteSpace(target.AuthorId)
             ? LiveAuthorIdentityHelper.ExtractStableAuthorId(target.ProfileUrl, resolvedPageUrl)
