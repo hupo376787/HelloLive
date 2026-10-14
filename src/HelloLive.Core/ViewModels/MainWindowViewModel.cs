@@ -46,7 +46,10 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private bool _isMonitoring;
     private bool _isMonitorPanelVisible;
     private bool _isMonitorGridExpanded;
+    private string _monitorSearchText = string.Empty;
     private double _monitorGridItemWidth = 340d;
+    private double _monitorGridAvailableWidth;
+    private int _monitorGridSizeMode = 1;
     private string _pushPlusToken = string.Empty;
     private string _currentTask = "等待任务";
     private LiveMonitorTarget? _currentStatusTarget;
@@ -304,10 +307,90 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     public bool IsMainWorkspaceVisible
         => !IsMonitorGridExpanded;
 
+    public string MonitorSearchText
+    {
+        get => _monitorSearchText;
+        set
+        {
+            if (!SetProperty(ref _monitorSearchText, value ?? string.Empty))
+                return;
+
+            OnPropertyChanged(nameof(FilteredMonitors));
+        }
+    }
+
+    public IEnumerable<LiveMonitorTarget> FilteredMonitors
+    {
+        get
+        {
+            var keyword = MonitorSearchText.Trim();
+            if (keyword.Length == 0)
+                return Monitors;
+
+            return Monitors.Where(target =>
+                ContainsSearchText(target.DisplayName, keyword)
+                || ContainsSearchText(target.AuthorId, keyword)
+                || ContainsSearchText(target.ProfileUrl, keyword)
+                || ContainsSearchText(target.PlatformText, keyword)
+                || ContainsSearchText(target.StatusMessage, keyword));
+        }
+    }
+
+    private static bool ContainsSearchText(string? value, string keyword)
+        => !string.IsNullOrWhiteSpace(value)
+           && value.Contains(
+               keyword,
+               StringComparison.CurrentCultureIgnoreCase);
+
     public double MonitorGridItemWidth
     {
         get => _monitorGridItemWidth;
         private set => SetProperty(ref _monitorGridItemWidth, value);
+    }
+
+    public bool IsMonitorGridSmall
+    {
+        get => _monitorGridSizeMode == 0;
+        set
+        {
+            if (value)
+                SetMonitorGridSizeMode(0);
+        }
+    }
+
+    public bool IsMonitorGridMedium
+    {
+        get => _monitorGridSizeMode == 1;
+        set
+        {
+            if (value)
+                SetMonitorGridSizeMode(1);
+        }
+    }
+
+    public bool IsMonitorGridLarge
+    {
+        get => _monitorGridSizeMode == 2;
+        set
+        {
+            if (value)
+                SetMonitorGridSizeMode(2);
+        }
+    }
+
+    private void SetMonitorGridSizeMode(int mode)
+    {
+        mode = Math.Clamp(mode, 0, 2);
+        if (_monitorGridSizeMode == mode)
+            return;
+
+        _monitorGridSizeMode = mode;
+        OnPropertyChanged(nameof(IsMonitorGridSmall));
+        OnPropertyChanged(nameof(IsMonitorGridMedium));
+        OnPropertyChanged(nameof(IsMonitorGridLarge));
+
+        if (_monitorGridAvailableWidth > 0)
+            RecalculateMonitorGridItemWidth();
     }
 
     public void UpdateMonitorGridAvailableWidth(double availableWidth)
@@ -315,14 +398,28 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         if (!double.IsFinite(availableWidth) || availableWidth <= 0)
             return;
 
-        // Reserve a small amount for the vertical scrollbar/right breathing room.
-        // Then divide the real available width into as many ~320 px cells as fit.
-        // This keeps the grid responsive while avoiding a large unused strip at right.
-        var usableWidth = Math.Max(300d, availableWidth - 14d);
-        var columns = Math.Max(1, (int)Math.Floor(usableWidth / 315d));
-        columns = Math.Min(columns, 6);
+        _monitorGridAvailableWidth = availableWidth;
+        RecalculateMonitorGridItemWidth();
+    }
 
-        MonitorGridItemWidth = Math.Floor((usableWidth / columns) * 10d) / 10d;
+    private void RecalculateMonitorGridItemWidth()
+    {
+        var usableWidth = Math.Max(300d, _monitorGridAvailableWidth - 14d);
+
+        // Medium is the existing layout. Small doubles the medium column count,
+        // so each card is approximately half the current width. Large keeps the
+        // current width; its height is doubled by the XAML large-size style.
+        var mediumColumns = Math.Max(
+            1,
+            (int)Math.Floor(usableWidth / 315d));
+        mediumColumns = Math.Min(mediumColumns, 6);
+
+        var columns = _monitorGridSizeMode == 0
+            ? Math.Min(mediumColumns * 2, 12)
+            : mediumColumns;
+
+        MonitorGridItemWidth =
+            Math.Floor((usableWidth / columns) * 10d) / 10d;
     }
 
     public string MonitorGridToggleIcon
@@ -1160,6 +1257,14 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
             CurrentStatusTarget = target;
             target.ApplyResult(result);
+
+            if (result.State != LiveMonitorState.Checking
+                && !string.IsNullOrWhiteSpace(target.AuthorId))
+            {
+                target = ReconcileDuplicateAuthor(target, result);
+                CurrentStatusTarget = target;
+            }
+
             _ = LoadMonitorAvatarAsync(target);
             HandleLiveTransitionForPushPlus(target, result);
             CurrentTask = result.State == LiveMonitorState.Checking
@@ -1167,6 +1272,68 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
                 : $"{target.DisplayName} · {target.StateText}";
             RaiseMetricsChanged();
         });
+    }
+
+    private LiveMonitorTarget ReconcileDuplicateAuthor(
+        LiveMonitorTarget checkedTarget,
+        LiveCheckResult result)
+    {
+        if (string.IsNullOrWhiteSpace(checkedTarget.AuthorId))
+            return checkedTarget;
+
+        var matches = Monitors
+            .Where(item =>
+                string.Equals(
+                    item.PlatformId,
+                    checkedTarget.PlatformId,
+                    StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(item.AuthorId)
+                && string.Equals(
+                    item.AuthorId,
+                    checkedTarget.AuthorId,
+                    StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        if (matches.Length <= 1)
+            return checkedTarget;
+
+        // Preserve the first item in the user's list. Alternate profile/live URLs
+        // can initially look different and only become identifiable after polling
+        // resolves the platform's real author id.
+        var canonical = matches
+            .OrderBy(item => Monitors.IndexOf(item))
+            .First();
+
+        if (!ReferenceEquals(canonical, checkedTarget))
+        {
+            canonical.ApplyResult(result with { TargetId = canonical.Id });
+            _ = LoadMonitorAvatarAsync(canonical);
+        }
+
+        foreach (var duplicate in matches)
+        {
+            if (ReferenceEquals(duplicate, canonical))
+                continue;
+
+            duplicate.PropertyChanged -= Target_PropertyChanged;
+            _loadedAvatarUrls.Remove(duplicate.Id);
+            _lastConfirmedLiveStates.Remove(duplicate.Id);
+
+            if (ReferenceEquals(CurrentStatusTarget, duplicate))
+                CurrentStatusTarget = canonical;
+
+            Monitors.Remove(duplicate);
+            _ = _coordinator.StopRecordingAsync(duplicate.Id);
+
+            AddLog(
+                $"检测到重复作者并自动去重：{duplicate.DisplayName} 与 {canonical.DisplayName} 的作者ID均为 {canonical.AuthorId}，已保留较早加入的一项。");
+        }
+
+        RefreshCoordinatorState();
+        RaiseMetricsChanged();
+        _ = SaveMonitorsAsync();
+
+        return canonical;
     }
 
     private void HandleLiveTransitionForPushPlus(
@@ -1310,6 +1477,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
             RefreshCoordinatorState();
             RaiseMetricsChanged();
+            OnPropertyChanged(nameof(FilteredMonitors));
             _ = SaveMonitorsAsync();
         }
     }
@@ -1378,6 +1546,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         OnPropertyChanged(nameof(NotDetectedCount));
         OnPropertyChanged(nameof(CheckingCount));
         OnPropertyChanged(nameof(FailedCount));
+        OnPropertyChanged(nameof(FilteredMonitors));
     }
 
     private void AddLog(string message)
