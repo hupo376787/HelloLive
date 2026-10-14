@@ -73,7 +73,9 @@ public sealed class SettingsService
         if (sourceVersion < 3 && settings.CheckIntervalSeconds == 60)
             settings.CheckIntervalSeconds = 300;
 
-        settings.Version = 3;
+        // v4: 增加录像结束后的可选 FFmpeg 压缩。旧配置默认保持关闭，
+        // 不改变已有用户的录像文件处理方式。
+        settings.Version = 4;
         settings.MaxConcurrentPages = Math.Clamp(settings.MaxConcurrentPages, 1, 8);
         settings.CheckIntervalSeconds = Math.Clamp(settings.CheckIntervalSeconds, 10, 3600);
         settings.CheckTimeoutSeconds = Math.Clamp(settings.CheckTimeoutSeconds, 5, 120);
