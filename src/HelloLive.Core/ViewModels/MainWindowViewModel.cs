@@ -10,6 +10,7 @@ using HelloLive.Core.Services.FFmpeg;
 using HelloLive.Core.Services.Images;
 using HelloLive.Core.Services.Monitoring;
 using HelloLive.Core.Services.Notifications;
+using HelloLive.Core.Services.Recording;
 using HelloLive.Core.Services.Settings;
 using HelloLive.Core.Sites;
 using HelloLive.Core.Utilities;
