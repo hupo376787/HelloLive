@@ -1333,6 +1333,26 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             if (ReferenceEquals(duplicate, canonical))
                 continue;
 
+            // Preserve useful user choices from the duplicate before removing it.
+            if (duplicate.IsEnabled && !canonical.IsEnabled)
+                canonical.IsEnabled = true;
+
+            if (duplicate.UseCustomDisplayName
+                && !canonical.UseCustomDisplayName
+                && !string.IsNullOrWhiteSpace(duplicate.DisplayName))
+            {
+                canonical.UseCustomDisplayName = true;
+                canonical.DisplayName = duplicate.DisplayName;
+            }
+
+            if (duplicate.UseCustomAvatar
+                && !canonical.UseCustomAvatar
+                && !string.IsNullOrWhiteSpace(duplicate.AvatarUrl))
+            {
+                canonical.UseCustomAvatar = true;
+                canonical.AvatarUrl = duplicate.AvatarUrl;
+            }
+
             duplicate.PropertyChanged -= Target_PropertyChanged;
             _loadedAvatarUrls.Remove(duplicate.Id);
             _lastConfirmedLiveStates.Remove(duplicate.Id);
