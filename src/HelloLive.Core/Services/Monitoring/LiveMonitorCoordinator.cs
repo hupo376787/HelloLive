@@ -259,15 +259,34 @@ public sealed class LiveMonitorCoordinator : IAsyncDisposable
                 && result.State == LiveMonitorState.Live
                 && result.Stream is not null)
             {
-                var recordingTarget = string.IsNullOrWhiteSpace(result.AuthorId)
-                    ? target
-                    : target with { AuthorId = result.AuthorId };
+                // The result callback may discover that this URL is a duplicate of
+                // another monitor after the real author id is resolved. Re-read the
+                // current target set before recording so a just-removed duplicate
+                // cannot start a redundant recording from the same check.
+                var currentTarget = GetSnapshot()
+                    .Targets
+                    .FirstOrDefault(item =>
+                        string.Equals(
+                            item.Id,
+                            target.Id,
+                            StringComparison.Ordinal));
 
-                await _recorder.StartIfNeededAsync(
-                    recordingTarget,
-                    result.Stream,
-                    result.ResolvedPageUrl,
-                    cancellationToken);
+                if (currentTarget is not null && currentTarget.IsEnabled)
+                {
+                    var recordingTarget =
+                        string.IsNullOrWhiteSpace(result.AuthorId)
+                            ? currentTarget
+                            : currentTarget with
+                            {
+                                AuthorId = result.AuthorId
+                            };
+
+                    await _recorder.StartIfNeededAsync(
+                        recordingTarget,
+                        result.Stream,
+                        result.ResolvedPageUrl,
+                        cancellationToken);
+                }
             }
 
             var name = string.IsNullOrWhiteSpace(target.DisplayName)
