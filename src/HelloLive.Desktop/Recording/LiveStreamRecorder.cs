@@ -28,11 +28,17 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
         new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, Task> _compressionTasks =
         new(StringComparer.OrdinalIgnoreCase);
+    private const long LowDiskSpaceThresholdBytes = 1L * 1024 * 1024 * 1024;
+    private static readonly TimeSpan DiskSpaceCheckInterval = TimeSpan.FromSeconds(5);
+
     private readonly SemaphoreSlim _compressionGate = new(1, 1);
     private readonly CancellationTokenSource _compressionCancellation = new();
+    private readonly CancellationTokenSource _diskSpaceCancellation = new();
+    private readonly Task _diskSpaceMonitorTask;
     private readonly object _compressionOptionsSync = new();
     private PostRecordingCompressionOptions _compressionOptions = new(false, false);
     private readonly HttpClient _httpClient;
+    private int _lowDiskAlertRaised;
     private bool _disposed;
 
     public LiveStreamRecorder()
@@ -48,6 +54,9 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
         {
             Timeout = Timeout.InfiniteTimeSpan
         };
+
+        _diskSpaceMonitorTask = Task.Run(
+            () => MonitorDiskSpaceAsync(_diskSpaceCancellation.Token));
     }
 
     public string DownloadRoot { get; }
@@ -55,6 +64,7 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
     public event Action<string>? Log;
     public event Action<LiveRecordingState>? RecordingStateChanged;
     public event Action<string>? StorageChanged;
+    public event Action<LowDiskSpaceInfo>? LowDiskSpaceDetected;
 
     public Task EnsureStorageAsync(CancellationToken cancellationToken = default)
     {
@@ -83,6 +93,13 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
             return Task.CompletedTask;
 
         Directory.CreateDirectory(DownloadRoot);
+
+        if (CheckAndHandleLowDiskSpace())
+        {
+            Log?.Invoke(
+                $"{target.DisplayName}：磁盘剩余空间不超过 1 GB，已阻止启动录像。");
+            return Task.CompletedTask;
+        }
 
         var authorId = string.IsNullOrWhiteSpace(target.AuthorId)
             ? LiveAuthorIdentityHelper.ExtractStableAuthorId(target.ProfileUrl, resolvedPageUrl)
@@ -289,6 +306,13 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
             || _disposed
             || string.IsNullOrWhiteSpace(inputPath))
         {
+            return;
+        }
+
+        if (CheckAndHandleLowDiskSpace())
+        {
+            Log?.Invoke(
+                $"{displayName}：磁盘剩余空间不超过 1 GB，已跳过录像压缩，原文件保留。");
             return;
         }
 
@@ -532,6 +556,99 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
 
             _compressionGate.Release();
         }
+    }
+
+    private async Task MonitorDiskSpaceAsync(
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                if (_sessions.Count > 0)
+                    CheckAndHandleLowDiskSpace();
+
+                await Task.Delay(
+                    DiskSpaceCheckInterval,
+                    cancellationToken);
+            }
+        }
+        catch (OperationCanceledException)
+            when (cancellationToken.IsCancellationRequested)
+        {
+        }
+    }
+
+    private bool CheckAndHandleLowDiskSpace()
+    {
+        if (!TryGetAvailableFreeSpace(DownloadRoot, out var availableBytes))
+            return false;
+
+        if (availableBytes > LowDiskSpaceThresholdBytes)
+        {
+            Interlocked.Exchange(ref _lowDiskAlertRaised, 0);
+            return false;
+        }
+
+        var info = new LowDiskSpaceInfo(
+            DownloadRoot,
+            availableBytes,
+            LowDiskSpaceThresholdBytes);
+
+        if (Interlocked.Exchange(ref _lowDiskAlertRaised, 1) == 0)
+        {
+            Log?.Invoke(
+                $"磁盘空间不足：录像目录所在磁盘仅剩 {FormatFreeSpace(availableBytes)}，已达到 1 GB 停止阈值，正在停止所有录像。");
+            LowDiskSpaceDetected?.Invoke(info);
+        }
+
+        foreach (var session in _sessions.Values.ToArray())
+        {
+            try
+            {
+                session.Cancellation.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+        }
+
+        return true;
+    }
+
+    private static bool TryGetAvailableFreeSpace(
+        string path,
+        out long availableBytes)
+    {
+        availableBytes = 0;
+
+        try
+        {
+            var fullPath = Path.GetFullPath(path);
+            var root = Path.GetPathRoot(fullPath);
+            if (string.IsNullOrWhiteSpace(root))
+                return false;
+
+            var drive = new DriveInfo(root);
+            if (!drive.IsReady)
+                return false;
+
+            availableBytes = drive.AvailableFreeSpace;
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static string FormatFreeSpace(long bytes)
+    {
+        if (bytes >= 1024L * 1024 * 1024)
+            return $"{bytes / (1024d * 1024 * 1024):0.00} GB";
+        if (bytes >= 1024L * 1024)
+            return $"{bytes / (1024d * 1024):0.0} MB";
+        return $"{Math.Max(0, bytes) / 1024d:0.0} KB";
     }
 
     private static string BuildCompressedOutputPath(string inputPath)
@@ -871,6 +988,15 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
         _disposed = true;
         await StopAllAsync();
 
+        _diskSpaceCancellation.Cancel();
+        try
+        {
+            await _diskSpaceMonitorTask;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+
         _compressionCancellation.Cancel();
 
         var compressionTasks = _compressionTasks.Values.ToArray();
@@ -888,6 +1014,7 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
             }
         }
 
+        _diskSpaceCancellation.Dispose();
         _compressionCancellation.Dispose();
         _compressionGate.Dispose();
         _httpClient.Dispose();
