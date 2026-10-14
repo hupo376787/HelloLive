@@ -54,6 +54,7 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
 
     public event Action<string>? Log;
     public event Action<LiveRecordingState>? RecordingStateChanged;
+    public event Action<string>? StorageChanged;
 
     public Task EnsureStorageAsync(CancellationToken cancellationToken = default)
     {
@@ -267,13 +268,16 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
             session.OutputPath,
             completionMessage,
             DateTimeOffset.Now));
+        StorageChanged?.Invoke(target.Id);
 
         QueuePostRecordingCompression(
+            target.Id,
             target.DisplayName,
             session.OutputPath);
     }
 
     private void QueuePostRecordingCompression(
+        string targetId,
         string displayName,
         string inputPath)
     {
@@ -306,6 +310,7 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
 
         var task = Task.Run(
             () => CompressRecordingAsync(
+                targetId,
                 displayName,
                 inputPath,
                 options,
@@ -323,6 +328,7 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
     }
 
     private async Task CompressRecordingAsync(
+        string targetId,
         string displayName,
         string inputPath,
         PostRecordingCompressionOptions options,
@@ -478,6 +484,7 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
 
                 Log?.Invoke(
                     $"{displayName}：压缩后未节省空间，已保留原录像，不生成压缩副本。");
+                StorageChanged?.Invoke(targetId);
                 return;
             }
 
@@ -506,6 +513,8 @@ public sealed class LiveStreamRecorder : ILiveStreamRecorder
                 Log?.Invoke(
                     $"{displayName}：录像压缩完成，节省 {savedPercent:0.0}% 空间；原文件已保留 → {Path.GetFileName(finalPath)}");
             }
+
+            StorageChanged?.Invoke(targetId);
         }
         catch (OperationCanceledException)
         {
