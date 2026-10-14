@@ -77,6 +77,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private int _remoteApiPort;
     private string _remoteApiToken = string.Empty;
     private string _remoteApiStatusText = "远程控制服务器未启动";
+    private LowDiskSpaceInfo? _pendingLowDiskSpaceAlert;
     private int _shutdownPrepared;
 
     public MainWindowViewModel(
@@ -132,6 +133,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         _coordinator.CheckResultChanged += Coordinator_CheckResultChanged;
         _coordinator.RecordingStateChanged += Coordinator_RecordingStateChanged;
         _coordinator.StorageChanged += Coordinator_StorageChanged;
+        _coordinator.LowDiskSpaceDetected += Coordinator_LowDiskSpaceDetected;
         _coordinator.Log += Coordinator_Log;
         _coordinator.RunningChanged += Coordinator_RunningChanged;
 
@@ -142,6 +144,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
     public event EventHandler<bool>? RemoteApiEnabledChanged;
     public event EventHandler? RemoteApiPortChanged;
+    public event Action<LowDiskSpaceInfo>? LowDiskSpaceAlertRequested;
 
     public ObservableCollection<LiveMonitorTarget> Monitors { get; } = [];
     public ObservableCollection<string> Logs { get; } = [];
@@ -2022,6 +2025,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         _coordinator.CheckResultChanged -= Coordinator_CheckResultChanged;
         _coordinator.RecordingStateChanged -= Coordinator_RecordingStateChanged;
         _coordinator.StorageChanged -= Coordinator_StorageChanged;
+        _coordinator.LowDiskSpaceDetected -= Coordinator_LowDiskSpaceDetected;
         _coordinator.Log -= Coordinator_Log;
         _coordinator.RunningChanged -= Coordinator_RunningChanged;
 
