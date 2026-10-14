@@ -107,6 +107,24 @@
     </Style>
     <Style Selector="ListBox.monitorGridList ListBoxItem">
       <Setter Property="Margin" Value="0,0,12,12" />
+      <Setter Property="VerticalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="ListBox.monitorGridList.largeGrid ListBoxItem">
+      <Setter Property="MinHeight" Value="190" />
+    </Style>
+    <Style Selector="ToggleButton.gridSize">
+      <Setter Property="Width" Value="38" />
+      <Setter Property="Height" Value="32" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="ToggleButton.gridSize:checked">
+      <Setter Property="Background" Value="#267C3AED" />
+      <Setter Property="BorderBrush" Value="#667C3AED" />
+      <Setter Property="Foreground" Value="#7C3AED" />
+      <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
     <Style Selector="Button.monitorAction">
       <Setter Property="MinHeight" Value="34" />
@@ -605,20 +623,23 @@
                 IsVisible="{Binding IsCompactMonitorPanelVisible}">
           <Grid RowDefinitions="Auto,*">
             <Grid>
-              <StackPanel Margin="0,0,44,0">
+              <StackPanel Margin="0,0,44,10"
+                          Spacing="7">
                 <TextBlock Text="监控列表" FontSize="19" FontWeight="SemiBold" />
                 <TextBlock Classes="caption"
                            Text="作者头像、身份、直播状态与录像状态集中显示；双击打开录像文件夹，右键打开操作菜单。"
-                           Margin="0,3,0,0"
                            TextWrapping="Wrap" />
+                <TextBox Text="{Binding MonitorSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         PlaceholderText="搜索昵称、作者ID、平台或地址"
+                         MinHeight="34"
+                         VerticalContentAlignment="Center" />
               </StackPanel>
-
             </Grid>
 
             <ListBox Grid.Row="1"
                      Margin="0,0,-18,0"
                      Classes="monitorList"
-                     ItemsSource="{Binding Monitors}"
+                     ItemsSource="{Binding FilteredMonitors}"
                      Background="Transparent"
                      BorderThickness="0"
                      SelectionMode="Single"
@@ -770,21 +791,49 @@
                 IsVisible="{Binding IsMonitorGridExpanded}">
           <Grid RowDefinitions="Auto,*">
             <Grid Margin="0,0,0,12">
-              <StackPanel Margin="0,0,44,0">
+              <StackPanel Margin="0,0,44,0"
+                          Spacing="7">
                 <TextBlock Text="监控列表" FontSize="19" FontWeight="SemiBold" />
                 <TextBlock Classes="caption"
                            Text="网格模式：监控项按多列集中显示；双击打开录像文件夹，右键打开操作菜单。"
-                           Margin="0,3,0,0"
                            TextWrapping="Wrap" />
+                <Grid ColumnDefinitions="*,Auto"
+                      ColumnSpacing="12">
+                  <TextBox Text="{Binding MonitorSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                           PlaceholderText="搜索昵称、作者ID、平台或地址"
+                           MinHeight="34"
+                           VerticalContentAlignment="Center" />
+                  <StackPanel Grid.Column="1"
+                              Orientation="Horizontal"
+                              Spacing="6"
+                              VerticalAlignment="Center">
+                    <TextBlock Classes="caption"
+                               Text="卡片"
+                               Margin="0,0,2,0"
+                               VerticalAlignment="Center" />
+                    <ToggleButton Classes="gridSize"
+                                  Content="小"
+                                  ToolTip.Tip="更小：卡片宽度约为当前的一半"
+                                  IsChecked="{Binding IsMonitorGridSmall, Mode=TwoWay}" />
+                    <ToggleButton Classes="gridSize"
+                                  Content="中"
+                                  ToolTip.Tip="当前默认大小"
+                                  IsChecked="{Binding IsMonitorGridMedium, Mode=TwoWay}" />
+                    <ToggleButton Classes="gridSize"
+                                  Content="大"
+                                  ToolTip.Tip="更大：保持当前宽度，高度约为两倍"
+                                  IsChecked="{Binding IsMonitorGridLarge, Mode=TwoWay}" />
+                  </StackPanel>
+                </Grid>
               </StackPanel>
-
             </Grid>
 
             <ListBox x:Name="ExpandedMonitorList"
                      Grid.Row="1"
                      Margin="0"
                      Classes="monitorList monitorGridList"
-                     ItemsSource="{Binding Monitors}"
+                     Classes.largeGrid="{Binding IsMonitorGridLarge}"
+                     ItemsSource="{Binding FilteredMonitors}"
                      Background="Transparent"
                      BorderThickness="0"
                      SelectionMode="Single"
