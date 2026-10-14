@@ -46,6 +46,10 @@ public sealed class LiveMonitorCoordinator : IAsyncDisposable
             _targets = targets.ToArray();
     }
 
+    public void SetPostRecordingCompressionOptions(
+        PostRecordingCompressionOptions options)
+        => _recorder.SetPostRecordingCompressionOptions(options);
+
     public void SetOptions(LiveMonitorOptions options)
     {
         // Headless now controls only user-triggered checks. Background polling below
