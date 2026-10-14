@@ -12,6 +12,7 @@ public interface ILiveStreamRecorder : IAsyncDisposable
 
     event Action<string>? Log;
     event Action<LiveRecordingState>? RecordingStateChanged;
+    event Action<string>? StorageChanged;
 
     Task EnsureStorageAsync(CancellationToken cancellationToken = default);
 
