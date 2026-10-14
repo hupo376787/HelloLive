@@ -265,6 +265,11 @@
                             Content="打开浏览器"
                             Command="{Binding OpenBrowserCommand}" />
                   </Grid>
+                  <Button MinHeight="38"
+                          HorizontalAlignment="Stretch"
+                          HorizontalContentAlignment="Center"
+                          Content="批量导入作者"
+                          Click="BatchImportButton_Click" />
                 </StackPanel>
               </Border>
 
