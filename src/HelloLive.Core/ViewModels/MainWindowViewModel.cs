@@ -14,6 +14,7 @@ using HelloLive.Core.Services.Recording;
 using HelloLive.Core.Services.Settings;
 using HelloLive.Core.Sites;
 using HelloLive.Core.Utilities;
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -34,6 +35,9 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private readonly Dictionary<string, string> _loadedAvatarUrls = new(StringComparer.Ordinal);
     private readonly Dictionary<string, bool> _lastConfirmedLiveStates = new(StringComparer.Ordinal);
     private readonly SemaphoreSlim _saveGate = new(1, 1);
+    private readonly SemaphoreSlim _folderSizeGate = new(2, 2);
+    private readonly ConcurrentDictionary<string, int> _folderSizeRefreshVersions =
+        new(StringComparer.Ordinal);
 
     private string _newMonitorUrl = string.Empty;
     private string _newMonitorName = string.Empty;
@@ -127,6 +131,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
         _coordinator.CheckResultChanged += Coordinator_CheckResultChanged;
         _coordinator.RecordingStateChanged += Coordinator_RecordingStateChanged;
+        _coordinator.StorageChanged += Coordinator_StorageChanged;
         _coordinator.Log += Coordinator_Log;
         _coordinator.RunningChanged += Coordinator_RunningChanged;
 
@@ -1105,6 +1110,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         await _coordinator.StopRecordingAsync(target.Id);
         _loadedAvatarUrls.Remove(target.Id);
         _lastConfirmedLiveStates.Remove(target.Id);
+        _folderSizeRefreshVersions.TryRemove(target.Id, out _);
         target.PropertyChanged -= Target_PropertyChanged;
 
         if (ReferenceEquals(CurrentStatusTarget, target))
@@ -1381,6 +1387,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             duplicate.PropertyChanged -= Target_PropertyChanged;
             _loadedAvatarUrls.Remove(duplicate.Id);
             _lastConfirmedLiveStates.Remove(duplicate.Id);
+            _folderSizeRefreshVersions.TryRemove(duplicate.Id, out _);
 
             if (ReferenceEquals(CurrentStatusTarget, duplicate))
                 CurrentStatusTarget = canonical;
@@ -1465,6 +1472,130 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         });
     }
 
+    private void Coordinator_StorageChanged(string targetId)
+        => Dispatcher.UIThread.Post(() =>
+        {
+            var target = Monitors.FirstOrDefault(x =>
+                string.Equals(x.Id, targetId, StringComparison.Ordinal));
+            if (target is not null)
+                QueueMonitorFolderSizeRefresh(target);
+        });
+
+    private void QueueMonitorFolderSizeRefresh(LiveMonitorTarget target)
+    {
+        if (string.IsNullOrWhiteSpace(target.AuthorId)
+            && string.IsNullOrWhiteSpace(target.RecordingFilePath))
+        {
+            target.RecordingFolderSizeBytes = null;
+            return;
+        }
+
+        var version = _folderSizeRefreshVersions.AddOrUpdate(
+            target.Id,
+            1,
+            static (_, current) => current + 1);
+
+        _ = RefreshMonitorFolderSizeAsync(target.Id, version);
+    }
+
+    private async Task RefreshMonitorFolderSizeAsync(
+        string targetId,
+        int version)
+    {
+        await _folderSizeGate.WaitAsync();
+        try
+        {
+            if (!_folderSizeRefreshVersions.TryGetValue(
+                    targetId,
+                    out var latestVersion)
+                || latestVersion != version)
+            {
+                return;
+            }
+
+            var target = await Dispatcher.UIThread.InvokeAsync(() =>
+                Monitors.FirstOrDefault(x =>
+                    string.Equals(
+                        x.Id,
+                        targetId,
+                        StringComparison.Ordinal)));
+
+            if (target is null)
+                return;
+
+            string folderPath;
+            try
+            {
+                folderPath = GetMonitorFolderPath(target);
+            }
+            catch
+            {
+                return;
+            }
+
+            var size = await Task.Run(() =>
+                CalculateDirectorySize(folderPath));
+
+            if (!_folderSizeRefreshVersions.TryGetValue(
+                    targetId,
+                    out latestVersion)
+                || latestVersion != version)
+            {
+                return;
+            }
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                var current = Monitors.FirstOrDefault(x =>
+                    string.Equals(
+                        x.Id,
+                        targetId,
+                        StringComparison.Ordinal));
+                if (current is not null)
+                    current.RecordingFolderSizeBytes = size;
+            });
+        }
+        finally
+        {
+            _folderSizeGate.Release();
+        }
+    }
+
+    private static long CalculateDirectorySize(string folderPath)
+    {
+        if (string.IsNullOrWhiteSpace(folderPath)
+            || !Directory.Exists(folderPath))
+        {
+            return 0;
+        }
+
+        long total = 0;
+
+        try
+        {
+            foreach (var filePath in Directory.EnumerateFiles(
+                         folderPath,
+                         "*",
+                         SearchOption.AllDirectories))
+            {
+                try
+                {
+                    total += new FileInfo(filePath).Length;
+                }
+                catch
+                {
+                    // A file can disappear while compression/cleanup is running.
+                }
+            }
+        }
+        catch
+        {
+            // Keep the last readable total instead of affecting the monitor UI.
+        }
+
+        return total;
+    }
+
     private void Coordinator_Log(string message)
         => Dispatcher.UIThread.Post(() => AddLog(message));
 
@@ -1491,6 +1622,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         target.PropertyChanged += Target_PropertyChanged;
         Monitors.Add(target);
         _ = LoadMonitorAvatarAsync(target);
+        QueueMonitorFolderSizeRefresh(target);
     }
 
     private async Task LoadMonitorAvatarAsync(LiveMonitorTarget target)
@@ -1541,6 +1673,14 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             RefreshCoordinatorState();
             RaiseMetricsChanged();
             OnPropertyChanged(nameof(FilteredMonitors));
+
+            if (e.PropertyName is nameof(LiveMonitorTarget.DisplayName)
+                or nameof(LiveMonitorTarget.AuthorId)
+                or nameof(LiveMonitorTarget.ProfileUrl))
+            {
+                QueueMonitorFolderSizeRefresh(target);
+            }
+
             _ = SaveMonitorsAsync();
         }
     }
@@ -1881,6 +2021,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
         _coordinator.CheckResultChanged -= Coordinator_CheckResultChanged;
         _coordinator.RecordingStateChanged -= Coordinator_RecordingStateChanged;
+        _coordinator.StorageChanged -= Coordinator_StorageChanged;
         _coordinator.Log -= Coordinator_Log;
         _coordinator.RunningChanged -= Coordinator_RunningChanged;
 
@@ -1894,6 +2035,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         if (_ffmpegInstaller is IDisposable ffmpegDisposable)
             ffmpegDisposable.Dispose();
         _imageCache.Dispose();
+        _folderSizeGate.Dispose();
         _saveGate.Dispose();
     }
 }
