@@ -4,7 +4,6 @@ using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using HelloLive.Core.Models;
-using HelloLive.Core.Services.Recording;
 using HelloLive.Core.ViewModels;
 using System.Diagnostics;
 
