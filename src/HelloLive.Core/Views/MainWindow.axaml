@@ -760,18 +760,6 @@
                 <TextBlock Classes="caption"
                            Text="作者头像、身份、直播状态与录像状态集中显示；双击打开录像文件夹，右键打开操作菜单。"
                            TextWrapping="Wrap" />
-                <StackPanel Orientation="Horizontal"
-                            Spacing="7"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Center">
-                  <TextBlock Text="仅显示直播中"
-                             FontSize="12"
-                             VerticalAlignment="Center" />
-                  <ToggleSwitch IsChecked="{Binding ShowLiveMonitorsOnly, Mode=TwoWay}"
-                                OnContent=""
-                                OffContent=""
-                                VerticalAlignment="Center" />
-                </StackPanel>
                 <Grid>
                   <TextBox Text="{Binding MonitorSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                            PlaceholderText="搜索昵称、作者ID、平台或地址"
@@ -1195,19 +1183,34 @@
           </Grid>
         </Border>
 
-        <Button Grid.Column="0"
-                Grid.ColumnSpan="2"
-                Width="34"
-                Height="34"
-                Padding="0"
-                Margin="0,19,27,0"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Top"
-                Background="Transparent"
-                IsVisible="{Binding IsMonitorPanelVisible}"
-                Command="{Binding ToggleMonitorGridCommand}"
-                ToolTip.Tip="{Binding MonitorGridToggleToolTip}">
-          <Grid Width="18" Height="18">
+        <StackPanel Grid.Column="0"
+                    Grid.ColumnSpan="2"
+                    Margin="0,19,27,0"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Orientation="Horizontal"
+                    Spacing="8"
+                    IsVisible="{Binding IsMonitorPanelVisible}">
+          <StackPanel Orientation="Horizontal"
+                      Spacing="6"
+                      VerticalAlignment="Center"
+                      IsVisible="{Binding IsCompactMonitorPanelVisible}">
+            <TextBlock Text="仅显示直播中"
+                       FontSize="12"
+                       VerticalAlignment="Center" />
+            <ToggleSwitch IsChecked="{Binding ShowLiveMonitorsOnly, Mode=TwoWay}"
+                          OnContent=""
+                          OffContent=""
+                          VerticalAlignment="Center" />
+          </StackPanel>
+
+          <Button Width="34"
+                  Height="34"
+                  Padding="0"
+                  Background="Transparent"
+                  Command="{Binding ToggleMonitorGridCommand}"
+                  ToolTip.Tip="{Binding MonitorGridToggleToolTip}">
+            <Grid Width="18" Height="18">
             <Canvas Width="18"
                     Height="18"
                     IsVisible="{Binding IsCompactMonitorPanelVisible}">
@@ -1265,8 +1268,9 @@
                     StrokeJoin="Miter"
                     Fill="Transparent" />
             </Canvas>
-          </Grid>
-        </Button>
+            </Grid>
+          </Button>
+        </StackPanel>
       </Grid>
 
       <!-- 修改作者信息：昵称、头像 URL 和监控 URL 使用同一风格弹窗集中编辑。 -->
