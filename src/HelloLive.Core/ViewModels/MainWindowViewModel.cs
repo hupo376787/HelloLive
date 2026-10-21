@@ -1493,6 +1493,13 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             LowDiskSpaceAlertRequested?.Invoke(info);
         });
 
+    public LowDiskSpaceInfo? ConsumePendingLowDiskSpaceAlert()
+    {
+        var info = _pendingLowDiskSpaceAlert;
+        _pendingLowDiskSpaceAlert = null;
+        return info;
+    }
+
     private void QueueMonitorFolderSizeRefresh(LiveMonitorTarget target)
     {
         if (string.IsNullOrWhiteSpace(target.AuthorId)
