@@ -6,11 +6,6 @@ public sealed record PostRecordingCompressionOptions(
     bool Enabled,
     bool DeleteOriginal);
 
-public sealed record LowDiskSpaceInfo(
-    string StoragePath,
-    long AvailableBytes,
-    long ThresholdBytes);
-
 public interface ILiveStreamRecorder : IAsyncDisposable
 {
     string DownloadRoot { get; }
