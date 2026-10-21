@@ -1484,6 +1484,15 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
                 QueueMonitorFolderSizeRefresh(target);
         });
 
+    private void Coordinator_LowDiskSpaceDetected(LowDiskSpaceInfo info)
+        => Dispatcher.UIThread.Post(() =>
+        {
+            _pendingLowDiskSpaceAlert = info;
+            AddLog(
+                $"磁盘空间不足：录像目录所在磁盘剩余 {FormatBytes(info.AvailableBytes)}，已达到 1 GB 停止阈值，所有录像已停止。");
+            LowDiskSpaceAlertRequested?.Invoke(info);
+        });
+
     private void QueueMonitorFolderSizeRefresh(LiveMonitorTarget target)
     {
         if (string.IsNullOrWhiteSpace(target.AuthorId)
