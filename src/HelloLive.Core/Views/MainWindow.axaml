@@ -978,15 +978,6 @@
                               Orientation="Horizontal"
                               Spacing="6"
                               VerticalAlignment="Center">
-                    <TextBlock Text="仅显示直播中"
-                               FontSize="12"
-                               Margin="0,0,1,0"
-                               VerticalAlignment="Center" />
-                    <ToggleSwitch IsChecked="{Binding ShowLiveMonitorsOnly, Mode=TwoWay}"
-                                  OnContent=""
-                                  OffContent=""
-                                  Margin="0,0,8,0"
-                                  VerticalAlignment="Center" />
                     <TextBlock Classes="caption"
                                Text="卡片"
                                Margin="0,0,2,0"
@@ -1193,8 +1184,7 @@
                     IsVisible="{Binding IsMonitorPanelVisible}">
           <StackPanel Orientation="Horizontal"
                       Spacing="6"
-                      VerticalAlignment="Center"
-                      IsVisible="{Binding IsCompactMonitorPanelVisible}">
+                      VerticalAlignment="Center">
             <TextBlock Text="仅显示直播中"
                        FontSize="12"
                        VerticalAlignment="Center" />
