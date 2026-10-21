@@ -5,6 +5,11 @@ using System.Text.Json.Serialization;
 
 namespace HelloLive.Core.Models;
 
+public sealed record LowDiskSpaceInfo(
+    string StoragePath,
+    long AvailableBytes,
+    long ThresholdBytes);
+
 public enum LiveMonitorState
 {
     Idle,
