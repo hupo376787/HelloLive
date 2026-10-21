@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform;
+using HelloLive.Core.Models;
 using HelloLive.Core.Services.Monitoring;
 using HelloLive.Core.Services.Recording;
 using HelloLive.Core.Services.Settings;
